@@ -31,6 +31,14 @@ class Organism {
         }
     }
 
+    //*************************************** */Water Addition
+    canFly() {
+        if (!this.anatomy.is_mover) return false;   // wings only matter for things that move
+        for (const c of this.anatomy.cells)
+            if (c.state == CellStates.wings) return true;
+        return false;
+    }
+
     inherit(parent) {
         this.move_range = parent.move_range;
         this.mutability = parent.mutability;
@@ -265,17 +273,28 @@ class Organism {
         }
     }
 
+    //*************************************** */Water Addition
     isPassableCell(cell, parent){
-        return cell != null && (cell.state == CellStates.empty || cell.owner == this || cell.owner == parent || cell.state == CellStates.food);
+        if (cell == null) return false;
+        if (cell.is_water && !this.canFly()) return false;   // NEW
+        return cell.state == CellStates.water || cell.state == CellStates.empty ||
+            cell.owner == this || cell.owner == parent || cell.state == CellStates.food;
     }
 
+    //*************************************** */Water Addition
     isClear(col, row, rotation=this.rotation) {
+        const flies = this.canFly();
         for(var loccell of this.anatomy.cells) {
             var cell = this.getRealCell(loccell, col, row, rotation);
             if (cell==null) {
                 return false;
             }
-            if (cell.owner==this || cell.state==CellStates.empty || (!Hyperparams.foodBlocksReproduction && cell.state==CellStates.food)){
+            if (cell.is_water && !flies) {          // NEW: walkers never enter water tiles
+                return false;
+            }
+            if (cell.owner==this || cell.state==CellStates.empty ||
+                (flies && cell.state==CellStates.water) ||   // NEW: fliers may enter open water
+                (!Hyperparams.foodBlocksReproduction && cell.state==CellStates.food)){
                 continue;
             }
             return false;

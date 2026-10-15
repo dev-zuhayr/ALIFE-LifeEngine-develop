@@ -56,6 +56,18 @@ class Gauge extends CellState {
         super('gauge');
     }
 }
+//*************************************** */Water Addition
+class Water extends CellState {
+    constructor() {
+        super('water');
+    }
+}
+//*************************************** */Wings Addition
+class Wings extends CellState {
+    constructor() {
+        super('wings');
+    }
+}
 class Eye extends CellState {
     constructor() {
         super('eye');
@@ -90,9 +102,13 @@ const CellStates = {
     armor: new Armor(),
     eye: new Eye(),
     gauge: new Gauge(),
+    //*************************************** */Water Addition
+    water: new Water(),
+    //*************************************** */Wings Addition
+    wings: new Wings(),
     defineLists() {
-        this.all = [this.empty, this.food, this.wall, this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.gauge]
-        this.living = [this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.gauge];
+        this.all = [this.empty, this.food, this.wall, this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.gauge, this.water, this.wings]
+        this.living = [this.mouth, this.producer, this.mover, this.killer, this.armor, this.eye, this.gauge, this.wings];
     },
     getRandomName: function() {
         return this.all[Math.floor(Math.random() * this.all.length)].name;

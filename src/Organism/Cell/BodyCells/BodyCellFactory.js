@@ -6,6 +6,7 @@ const ArmorCell = require("./ArmorCell");
 const EyeCell = require("./EyeCell");
 const GaugeCell = require("./GaugeCell");
 const CellStates = require("../CellStates");
+const WingsCell = require("./WingsCell");
 
 
 const BodyCellFactory = {
@@ -18,6 +19,7 @@ const BodyCellFactory = {
         type_map[CellStates.armor.name] = ArmorCell;
         type_map[CellStates.eye.name] = EyeCell;
         type_map[CellStates.gauge.name] = GaugeCell;
+        type_map[CellStates.wings.name] = WingsCell;
         this.type_map = type_map;
     },
 
