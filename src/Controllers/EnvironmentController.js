@@ -195,6 +195,7 @@ class EnvironmentController extends CanvasController{
             return true;
         }
         return false;
+        //
     }
 
     dropCellType(col, row, state, killBlocking=false, ignoreState=null) {
