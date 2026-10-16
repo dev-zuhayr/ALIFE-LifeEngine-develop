@@ -26,6 +26,7 @@ class WorldEnvironment extends Environment{
         this.reset_count = 0;
         this.total_ticks = 0;
         this.data_update_rate = 100;
+        this.plant_food_produced = 0; // food made by producer cells since the last sampleFood()
         FossilRecord.setEnv(this);
     }
 
@@ -107,8 +108,8 @@ class WorldEnvironment extends Environment{
         return this.total_mutability / this.organisms.length;
     }
 
-    changeCell(c, r, state, owner) {
-        super.changeCell(c, r, state, owner);
+    changeCell(c, r, state, owner, food_source) {
+        super.changeCell(c, r, state, owner, food_source);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
         if(state == CellStates.wall)
             this.walls.push(this.grid_map.cellAt(c, r));
@@ -153,6 +154,22 @@ class WorldEnvironment extends Environment{
         }
     }
 
+    // counts food on the grid by source, plus plant food produced since the last call (which resets that counter)
+    sampleFood() {
+        let counts = {total_food: 0, plant_food: 0, corpse_food: 0, other_food: 0};
+        for (let col of this.grid_map.grid) {
+            for (let cell of col) {
+                if (cell.state !== CellStates.food)
+                    continue;
+                counts.total_food++;
+                counts[cell.food_source + '_food']++;
+            }
+        }
+        counts.plant_food_produced = this.plant_food_produced;
+        this.plant_food_produced = 0;
+        return counts;
+    }
+
     reset(confirm_reset=true, reset_life=true) {
         if (confirm_reset && !confirm('The current environment will be lost. Proceed?'))
             return false;
@@ -168,6 +185,7 @@ class WorldEnvironment extends Environment{
         this.total_mutability = 0;
         this.total_ticks = 0;
         this.largest_cell_count = 0;
+        this.plant_food_produced = 0;
         FossilRecord.clear_record();
         if (reset_life)
             this.OriginOfLife();
