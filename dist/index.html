@@ -243,6 +243,19 @@
 						<label for="extra-mover-cost" title='Additional food cost for movers to reproduce'>Extra mover reproduction cost:</label>
 						<input type="number" id="extra-mover-cost" value=0 max="1000" step="1">
 						<br>
+						<h4 title='Random storms wipe out all organisms and food inside a small circular patch of the map.'>Storms</h4>
+						<label for="storms-enabled" title='When on, storms can strike the world at random.'>Storms enabled</label>
+						<input type="checkbox" id="storms-enabled" checked>
+						<br>
+						<label for="storm-chance" title='Percent chance per tick that a storm strikes (before any season modifier). 0.02 means roughly 1 storm every 5000 ticks.'>Storm chance (% per tick):</label>
+						<input type="number" id="storm-chance" min="0" max="100" value=0.02 step="0.005">
+						<br>
+						<label for="storm-radius" title='Radius of the circular storm patch, in grid cells.'>Storm radius (cells):</label>
+						<input type="number" id="storm-radius" min="0" max="200" value=8 step="1">
+						<br>
+						<button id='trigger-storm' title='Strike a random patch of the world with a storm right now.'>Trigger storm now</button>
+						<button id='download-storm-log' title='Download a .json record of every storm (time, place, organisms killed, species hit and species made extinct).'>Download storm log</button>
+						<br>
 						<a id="download-el" style="display: none;"></a>
 						<input id="upload-hyperparams" style="display: none;" type="file">
 					</div>
@@ -255,6 +268,7 @@
 						<p id='top-species'>Most Populous Species: </p>
 						<p id='largest-org'>Largest Organism Ever: </p>
 						<p id='avg-mut'>Average Mutation Rate: </p>
+						<p id='storm-stats'>Storms: </p>
 						<label for="chart-option">Chart: </label>
 						<select name="chart-option" id="chart-option">
 							<option value="population">Population</option>
