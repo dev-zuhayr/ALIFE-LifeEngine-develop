@@ -16,6 +16,9 @@ class Species {
         this.end_tick = -1;
         this.name = Math.random().toString(36).substr(2, 10);
         this.extinct = false;
+        this.lineage_id = -1;
+        this.parent_lineage_id = -1;
+        this.founder_id = -1;
         this.calcAnatomyDetails();
     }
 
