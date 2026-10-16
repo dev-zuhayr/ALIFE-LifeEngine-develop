@@ -32,6 +32,17 @@ const FossilRecord = {
         return new_species;
     },
 
+    // gives a species placed by hand a new root lineage starting at the current tick
+    addFounderLineage: function(species) {
+        species.lineage_id = this.next_lineage_id++;
+        species.parent_lineage_id = -1;
+        species.founder_id = species.lineage_id;
+        species.calcAnatomyDetails(); // the editor may have changed the anatomy since the species was made
+        this.addLineageEntry(species);
+        this.lineage_tree[species.lineage_id].start_tick = this.env.total_ticks;
+        this.lineage_tree[species.lineage_id].end_tick = -1;
+    },
+
     addLineageEntry: function(species) {
         this.lineage_tree[species.lineage_id] = {
             parent_lineage_id: species.parent_lineage_id,
