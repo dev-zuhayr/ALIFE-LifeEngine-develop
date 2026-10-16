@@ -9,6 +9,9 @@ const SerializeHelper = require("../Utils/SerializeHelper");
 
 class Organism {
     constructor(col, row, env, parent=null) {
+        this.id = Organism.next_id++;
+        this.parent_id = -1;
+        this.generation = 0;
         this.c = col;
         this.r = row;
         this.env = env;
@@ -32,6 +35,8 @@ class Organism {
     }
 
     inherit(parent) {
+        this.parent_id = parent.id;
+        this.generation = parent.generation + 1;
         this.move_range = parent.move_range;
         this.mutability = parent.mutability;
         this.species = parent.species;
