@@ -9,6 +9,7 @@ const FossilRecord = require('../Stats/FossilRecord');
 const WorldConfig = require('../WorldConfig');
 const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
+const LineageTracker = require('../Stats/LineageTracker');
 
 class WorldEnvironment extends Environment{
     constructor(engine, cell_size) {
@@ -45,6 +46,7 @@ class WorldEnvironment extends Environment{
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
             FossilRecord.updateData();
+            LineageTracker.record(this);
         }
     }
 
@@ -173,6 +175,10 @@ class WorldEnvironment extends Environment{
     reset(confirm_reset=true, reset_life=true) {
         if (confirm_reset && !confirm('The current environment will be lost. Proceed?'))
             return false;
+        // log the state the run ended in (e.g. population 0 on extinction), unless this tick was already sampled
+        if (this.total_ticks % this.data_update_rate != 0)
+            LineageTracker.record(this);
+        LineageTracker.newRun();
         let restart = false;
         if (this.engine.running) {
             this.engine.last_fps = this.engine.fps;
@@ -223,6 +229,7 @@ class WorldEnvironment extends Environment{
 
     loadRaw(env) { // species name->stats map, evolution controls, 
         this.organisms = [];
+        LineageTracker.newRun(); // archive the previous world's lineage tree before it is cleared
         FossilRecord.clear_record();
         let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
         this.resizeGridColRow(cell_size, env.grid.cols, env.grid.rows)
@@ -256,6 +263,24 @@ class WorldEnvironment extends Environment{
             s.name = orgRaw.species_name;
             org.species = s;
         }
+
+        // continue organism ids after the highest loaded id
+        let max_id = -1;
+        for (let org of this.organisms)
+            max_id = Math.max(max_id, org.id);
+        Organism.next_id = max_id + 1;
+
+        // saves from before lineage tracking have no lineage ids; treat each species as its own founder
+        for (let name in species) {
+            let s = species[name];
+            if (s.lineage_id === -1) {
+                s.lineage_id = FossilRecord.next_lineage_id++;
+                s.parent_lineage_id = -1;
+                s.founder_id = s.lineage_id;
+            }
+            FossilRecord.addLineageEntry(s);
+        }
+
         for (let name in species)
             FossilRecord.addSpeciesObj(species[name]);
         FossilRecord.loadRaw(env.fossil_record);
