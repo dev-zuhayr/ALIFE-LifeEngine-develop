@@ -171,6 +171,11 @@ class EnvironmentController extends CanvasController{
         var new_org = new Organism(col, row, this.env, organism);
 
         if (new_org.isClear(col, row)) {
+            // the same organism loaded into the editor again has a new species object with the same name;
+            // join the species already in the world so both copies share one lineage
+            let extant = FossilRecord.extant_species[new_org.species.name];
+            if (extant && extant !== new_org.species)
+                new_org.species = extant;
             let new_species = !FossilRecord.speciesIsExtant(new_org.species.name);
             if (new_org.species.extinct) {
                 FossilRecord.resurrect(new_org.species);
