@@ -175,9 +175,8 @@ class WorldEnvironment extends Environment{
     reset(confirm_reset=true, reset_life=true) {
         if (confirm_reset && !confirm('The current environment will be lost. Proceed?'))
             return false;
-        // log the state the run ended in (e.g. population 0 on extinction), unless this tick was already sampled
-        if (this.total_ticks % this.data_update_rate != 0)
-            LineageTracker.record(this);
+        // log the state the run ended in (e.g. population 0 on extinction)
+        LineageTracker.record(this, 'end');
         LineageTracker.newRun();
         let restart = false;
         if (this.engine.running) {
