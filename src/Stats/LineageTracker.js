@@ -13,7 +13,7 @@ const LineageTracker = {
     },
 
     header: function() {
-        return ['run_id', 'tick', 'lineage_id', 'parent_lineage_id', 'founder_id', 'population']
+        return ['run_id', 'tick', 'event', 'lineage_id', 'parent_lineage_id', 'founder_id', 'population']
             .concat(this.cell_names)
             .concat(['total_pop', 'num_lineages', 'total_food', 'plant_food', 'corpse_food', 'other_food',
                      'plant_food_produced', 'avg_mutability'])
@@ -26,8 +26,9 @@ const LineageTracker = {
             .join(',');
     },
 
-    // called every data_update_rate ticks, and once more before a reset
-    record: function(env) {
+    // called every data_update_rate ticks with event 'sample', and with event 'end' just before a reset.
+    // an 'end' row can share a tick with a 'sample' row, since organisms can all die after that tick was sampled
+    record: function(env, event='sample') {
         let lineages = {};
         let total_pop = 0;
         for (let org of env.organisms) {
@@ -55,16 +56,16 @@ const LineageTracker = {
 
         // with no living organisms, still log a row so the extinction shows up in the data
         if (total_pop === 0) {
-            this.rows.push(this.lineageRow(env.total_ticks, -1, {parent_lineage_id: -1, founder_id: -1,
+            this.rows.push(this.lineageRow(env.total_ticks, event, -1, {parent_lineage_id: -1, founder_id: -1,
                 population: 0, cells: this.emptyCellCounts()}, world));
             return;
         }
         for (let id in lineages)
-            this.rows.push(this.lineageRow(env.total_ticks, id, lineages[id], world));
+            this.rows.push(this.lineageRow(env.total_ticks, event, id, lineages[id], world));
     },
 
-    lineageRow: function(tick, lineage_id, l, world) {
-        return [this.run_id, tick, lineage_id, l.parent_lineage_id, l.founder_id, l.population]
+    lineageRow: function(tick, event, lineage_id, l, world) {
+        return [this.run_id, tick, event, lineage_id, l.parent_lineage_id, l.founder_id, l.population]
             .concat(this.cell_names.map(name => l.cells[name]))
             .concat(world)
             .join(',');
