@@ -6,7 +6,7 @@ const Anatomy = require("./Anatomy");
 const Brain = require("./Perception/Brain");
 const FossilRecord = require("../Stats/FossilRecord");
 const SerializeHelper = require("../Utils/SerializeHelper");
-
+const LineageTracker = require("../Stats/LineageTracker")
 class Organism {
     constructor(col, row, env, parent=null) {
         this.id = Organism.next_id++;
@@ -432,5 +432,7 @@ class Organism {
     }
 
 }
+
+Organism.next_id = 0;
 
 module.exports = Organism;

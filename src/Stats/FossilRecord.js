@@ -28,14 +28,18 @@ const FossilRecord = {
         new_species.lineage_id = this.next_lineage_id++;
         new_species.parent_lineage_id = ancestor ? ancestor.lineage_id : -1;
         new_species.founder_id = ancestor ? ancestor.founder_id : new_species.lineage_id; //if this species has no ancestor then make its id the founder id
-        this.lineage_tree[new_species.lineage_id] = {
-            parent_lineage_id: new_species.parent_lineage_id,
-            founder_id: new_species.founder_id,
-            start_tick: new_species.start_tick,
-            end_tick: -1,
-            cell_counts: Object.assign({}, new_species.cell_counts),
-        };
+        this.addLineageEntry(new_species);
         return new_species;
+    },
+
+    addLineageEntry: function(species) {
+        this.lineage_tree[species.lineage_id] = {
+            parent_lineage_id: species.parent_lineage_id,
+            founder_id: species.founder_id,
+            start_tick: species.start_tick,
+            end_tick: species.end_tick,
+            cell_counts: Object.assign({}, species.cell_counts),
+        };
     },
 
     addSpeciesObj: function(species) {
