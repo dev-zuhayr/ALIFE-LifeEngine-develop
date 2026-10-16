@@ -180,6 +180,10 @@ class EnvironmentController extends CanvasController{
                 new_org.species.start_tick = this.env.total_ticks;
                 new_org.species.population = 0;
             }
+            // a placed organism whose species isn't currently alive starts its own lineage.
+            // its old lineage id may be from an earlier run, so it is never reused
+            if (new_species)
+                FossilRecord.addFounderLineage(new_org.species);
 
             this.env.addOrganism(new_org);
             new_org.species.addPop();
