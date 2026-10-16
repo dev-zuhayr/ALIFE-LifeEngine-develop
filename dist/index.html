@@ -175,6 +175,12 @@
 						<button id='load-env' title="Load world save file">Load World</button>
 						<label for="override-controls" title='Override the current evolution controls with those from the loaded world'>Override Evolution Controls</label>
 						<input type="checkbox" id="override-controls" checked>
+						<br>
+						<button id='download-lineage' title="Download the lineage log (per-lineage population, cell counts and food every 100 ticks) and the lineage tree as CSV files">Download Lineage CSV</button>
+						<label for="lineage-file-name" title='Save lineage CSVs as:'>Save As:</label>
+						<input type="text" id="lineage-file-name" value="lineages" style="text-align: center;">.csv
+						<br>
+						<button id='clear-lineage' title="Delete all logged lineage rows. Logging continues from the current tick">Clear lineage log</button>
 					</div>
 				</div>
 				<div id='hyperparameters' class='tab'>
