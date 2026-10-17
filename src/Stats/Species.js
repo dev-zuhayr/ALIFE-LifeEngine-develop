@@ -19,6 +19,7 @@ class Species {
         this.lineage_id = -1;
         this.parent_lineage_id = -1;
         this.founder_id = -1;
+        this.revivals = 0; // times this species came back after going extinct (e.g. from a seed)
         this.calcAnatomyDetails();
     }
 

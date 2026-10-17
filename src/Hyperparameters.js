@@ -45,6 +45,7 @@ const Hyperparams = {
         this.seedDelayMin = 200;     // fewest ticks before a seed tries to sprout
         this.seedDelayMax = 2000;    // most ticks before a seed tries to sprout
         this.seedMaxDormancy = 5000; // a seed that hasn't sprouted this many ticks after being dropped rots
+        this.seedScatterRadius = 3;  // seeds land on a random tile up to this many cells from the plant's center (0 = on it)
     },
 
     loadJsonObj(obj) {

@@ -73,7 +73,7 @@ class EnvironmentController extends CanvasController{
                 if (noise > noise_threshold && noise < noise_threshold + thickness/resolution) {
                     let cell = this.env.grid_map.cellAt(c, r);
                     if (cell != null) {
-                        if(cell.owner != null) cell.owner.die();
+                        if(cell.owner != null) cell.owner.die(false); // killed by hand, so no seed
                         this.env.changeCell(c, r, CellStates.wall, null);
                     }
                 }
@@ -206,7 +206,7 @@ class EnvironmentController extends CanvasController{
             if (cell == null)
                 continue;
             if (killBlocking && cell.owner != null){
-                cell.owner.die();
+                cell.owner.die(false); // killed by hand, so no seed
             }
             else if (cell.owner != null) {
                 continue;
@@ -241,7 +241,7 @@ class EnvironmentController extends CanvasController{
             var r = this.cur_cell.row + loc[1];
             var cell = this.env.grid_map.cellAt(c, r);
             if (cell != null && cell.owner != null)
-                cell.owner.die();
+                cell.owner.die(false); // killed by hand, so no seed
         }
     }
 

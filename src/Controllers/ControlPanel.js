@@ -394,6 +394,36 @@ class ControlPanel {
         $('#download-storm-log').click(() => {
             this.engine.env.storms.downloadLog();
         });
+        $('#seeds-enabled').change(function() {
+            Hyperparams.seedsEnabled = this.checked;
+        });
+        $('#seed-chance').change(function() {
+            Hyperparams.seedChance = Math.min(100, Math.max(0, parseFloat($('#seed-chance').val()) || 0));
+            $('#seed-chance').val(Hyperparams.seedChance);
+        });
+        // keep min <= max: moving one past the other drags the other along
+        $('#seed-delay-min').change(function() {
+            Hyperparams.seedDelayMin = Math.max(0, parseInt($('#seed-delay-min').val()) || 0);
+            if (Hyperparams.seedDelayMax < Hyperparams.seedDelayMin)
+                Hyperparams.seedDelayMax = Hyperparams.seedDelayMin;
+            $('#seed-delay-min').val(Hyperparams.seedDelayMin);
+            $('#seed-delay-max').val(Hyperparams.seedDelayMax);
+        });
+        $('#seed-delay-max').change(function() {
+            Hyperparams.seedDelayMax = Math.max(0, parseInt($('#seed-delay-max').val()) || 0);
+            if (Hyperparams.seedDelayMin > Hyperparams.seedDelayMax)
+                Hyperparams.seedDelayMin = Hyperparams.seedDelayMax;
+            $('#seed-delay-min').val(Hyperparams.seedDelayMin);
+            $('#seed-delay-max').val(Hyperparams.seedDelayMax);
+        });
+        $('#seed-max-dormancy').change(function() {
+            Hyperparams.seedMaxDormancy = Math.max(0, parseInt($('#seed-max-dormancy').val()) || 0);
+            $('#seed-max-dormancy').val(Hyperparams.seedMaxDormancy);
+        });
+        $('#seed-scatter-radius').change(function() {
+            Hyperparams.seedScatterRadius = Math.max(0, parseInt($('#seed-scatter-radius').val()) || 0);
+            $('#seed-scatter-radius').val(Hyperparams.seedScatterRadius);
+        });
 
         $('#evolved-mutation').change( function() {
             if (this.checked) {
@@ -496,6 +526,12 @@ class ControlPanel {
         $('#storms-enabled').prop('checked', Hyperparams.stormsEnabled);
         $('#storm-chance').val(Hyperparams.stormChance);
         $('#storm-radius').val(Hyperparams.stormRadius);
+        $('#seeds-enabled').prop('checked', Hyperparams.seedsEnabled);
+        $('#seed-chance').val(Hyperparams.seedChance);
+        $('#seed-delay-min').val(Hyperparams.seedDelayMin);
+        $('#seed-delay-max').val(Hyperparams.seedDelayMax);
+        $('#seed-max-dormancy').val(Hyperparams.seedMaxDormancy);
+        $('#seed-scatter-radius').val(Hyperparams.seedScatterRadius);
         $('#look-range').val(Hyperparams.lookRange);
         $('#see-through-self').prop('checked', Hyperparams.seeThroughSelf);
         $('#global-mutation').val(Hyperparams.globalMutability);
