@@ -9,10 +9,6 @@ window.onload = function() {
     }
     var engine = new Engine();
     engine.start(60);
-    // dev handle, lets you drive the sim from the browser console. eg:
-    //   engine.env.startBoom(5, 500)   force a 5x boom for 500 ticks
-    //   engine.env.decayFood()         run one decay slice by hand
-    window.engine = engine;
 };
 
 function mobileCheck() {
