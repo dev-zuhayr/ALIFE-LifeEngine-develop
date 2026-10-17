@@ -413,6 +413,9 @@ class ControlPanel {
         $('#dont-kill-same-species').change(function() {
             Hyperparams.dontKillSameSpecies = this.checked;
         });
+        $('#wings-can-mutate').change(function() {
+            Hyperparams.wingsCanMutate = this.checked;
+        });
         $('#reset-rules').click(() => {
             this.setHyperparamDefaults();
         });
@@ -463,6 +466,7 @@ class ControlPanel {
         $('#movers-produce').prop('checked', Hyperparams.moversCanProduce);
         $('#food-blocks').prop('checked', Hyperparams.foodBlocksReproduction);
         $('#dont-kill-same-species').prop('checked', Hyperparams.dontKillSameSpecies);
+        $('#wings-can-mutate').prop('checked', Hyperparams.wingsCanMutate);
         $('#food-drop-rate').val(Hyperparams.foodDropProb);
         $('#extra-mover-cost').val(Hyperparams.extraMoverFoodCost);
         $('#org-limit').val(Hyperparams.maxOrganisms);

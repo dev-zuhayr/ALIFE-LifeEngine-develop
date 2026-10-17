@@ -50,8 +50,8 @@ class Organism {
 
     randomMutationState() {
         let state = CellStates.getRandomLivingType();
-        // wings only for animals: must move, must not be a producer
-        const can_have_wings = this.isAnimalBody();
+        // wings only for animals (must move, must not be a producer), and only if the wings control is on
+        const can_have_wings = Hyperparams.wingsCanMutate && this.isAnimalBody();
         while (state == CellStates.wings && !can_have_wings)
             state = CellStates.getRandomLivingType();
         return state;

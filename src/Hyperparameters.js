@@ -24,6 +24,8 @@ const Hyperparams = {
         this.instaKill = false;
         this.dontKillSameSpecies = false;
 
+        this.wingsCanMutate = true;
+
         this.lookRange = 30;
         this.seeThroughSelf = false;
         this.evolveIndependentEyeDecisions = true;
