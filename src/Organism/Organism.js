@@ -32,11 +32,45 @@ class Organism {
     }
 
     //*************************************** */Water Addition
+    hasProducerCell() {
+        return this.anatomy.cells.some(c => c.state == CellStates.producer);
+    }
+
+    // animal body = has a mover cell and no producer cell (checked on real cells, not flags)
+    isAnimalBody() {
+        return this.anatomy.cells.some(c => c.state == CellStates.mover) && !this.hasProducerCell();
+    }
+
     canFly() {
-        if (!this.anatomy.is_mover) return false;   // wings only matter for things that move
+        if (!this.isAnimalBody()) return false;   // wings only matter for animals
         for (const c of this.anatomy.cells)
             if (c.state == CellStates.wings) return true;
         return false;
+    }
+
+    randomMutationState() {
+        let state = CellStates.getRandomLivingType();
+        // wings only for animals: must move, must not be a producer
+        const can_have_wings = this.isAnimalBody();
+        while (state == CellStates.wings && !can_have_wings)
+            state = CellStates.getRandomLivingType();
+        return state;
+    }
+
+    stripUselessWings() {
+        if (this.isAnimalBody()) return false;
+        let stripped = false;
+        for (const cell of [...this.anatomy.cells]) {
+            if (cell.state != CellStates.wings) continue;
+            if (cell.loc_col == 0 && cell.loc_row == 0) {
+                // the centre cell can't be removed, so turn it back into a mouth
+                this.anatomy.replaceCell(CellStates.mouth, 0, 0, false);
+                stripped = true;
+            }
+            else
+                stripped = this.anatomy.removeCell(cell.loc_col, cell.loc_row) || stripped;
+        }
+        return stripped;
     }
 
     inherit(parent) {
@@ -122,7 +156,7 @@ class Organism {
         let removed = false;
         if (this.calcRandomChance(Hyperparams.addProb)) {
             let branch = this.anatomy.getRandomCell();
-            let state = CellStates.getRandomLivingType(); // branch.state;
+            let state = this.randomMutationState(); // branch.state;
             let growth_direction = Neighbors.all[Math.floor(Math.random() * Neighbors.all.length)];
             let c = branch.loc_col + growth_direction[0];
             let r = branch.loc_row + growth_direction[1];
@@ -165,7 +199,7 @@ class Organism {
         }
         if (this.calcRandomChance(Hyperparams.changeProb)){
             let cell = this.anatomy.getRandomCell();
-            let state = CellStates.getRandomLivingType();
+            let state = this.randomMutationState();
             this.anatomy.replaceCell(state, cell.loc_col, cell.loc_row);
             changed = true;
         }
@@ -184,8 +218,10 @@ class Organism {
                 this.move_range = 1;
             };
         }
+        
         // return true if a new species is created, which is only true for anatomy changes, not brain changes
-        return added || changed || removed;
+        const stripped = this.stripUselessWings();
+        return added || changed || removed || stripped;
     }
 
     calcRandomChance(prob) {

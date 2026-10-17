@@ -89,6 +89,7 @@ class WorldEnvironment extends Environment{
     }
 
     addOrganism(organism) {
+        organism.stripUselessWings(); // catches saved worlds and editor drops; no-op for normal births
         organism.updateGrid();
         this.total_mutability += organism.mutability;
         this.organisms.push(organism);
@@ -281,7 +282,7 @@ class WorldEnvironment extends Environment{
                 this.grid_map.cellAt(c, r).is_water = false;
     }
 
-    generateIslands(num_islands = 6, land_fraction = 0.55, wobble = 0.3, spacing = 2.6) {
+    /*generateIslands(num_islands = 6, land_fraction = 0.35, wobble = 0.3, spacing = 2.6) {
         const cols = this.grid_map.cols, rows = this.grid_map.rows;
         const R = Math.sqrt(land_fraction * cols * rows / (num_islands * Math.PI));
         const center = this.grid_map.getCenter();
@@ -311,6 +312,23 @@ class WorldEnvironment extends Environment{
             }
         }
         console.log('water %:', (100 * water / (cols * rows)).toFixed(1));
+    }*/
+   generateIslands(scale = 0.04, water_below = 0.008, spawn_clear_radius = 8) {
+        console.log('generateIslands called', this.grid_map.cols, this.grid_map.rows);
+        Perlin.seed(); // new random layout; skip this line when loading a saved world
+        const center = this.grid_map.getCenter(); // [col, row], same call OriginOfLife uses
+        for (let c = 0; c < this.grid_map.cols; c++) {
+            for (let r = 0; r < this.grid_map.rows; r++) {
+                const cell = this.grid_map.cellAt(c, r);
+                if (cell.state != CellStates.empty) continue;
+                // keep the starting area dry so the first organism isn't in the ocean
+                if (Math.hypot(c - center[0], r - center[1]) < spawn_clear_radius) continue;
+                if (Perlin.get(c * scale, r * scale) < water_below) {
+                    cell.is_water = true;
+                    this.changeCell(c, r, CellStates.water, null);
+                }
+            }
+        }
     }
 }
 
