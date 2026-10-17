@@ -96,6 +96,9 @@ const FossilRecord = {
     resurrect: function(species) {
         if (species.extinct) {
             species.extinct = false;
+            species.end_tick = -1; // alive again, so it hasn't ended
+            if (this.lineage_tree[species.lineage_id])
+                this.lineage_tree[species.lineage_id].end_tick = -1;
             this.extant_species[species.name] = species;
             delete this.extinct_species[species.name];
         }
