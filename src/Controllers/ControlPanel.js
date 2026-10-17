@@ -379,6 +379,21 @@ class ControlPanel {
         $('#org-limit').change(function() {
             Hyperparams.maxOrganisms = parseInt($('#org-limit').val());
         });
+        $('#storms-enabled').change(function() {
+            Hyperparams.stormsEnabled = this.checked;
+        });
+        $('#storm-chance').change(function() {
+            Hyperparams.stormChance = Math.max(0, parseFloat($('#storm-chance').val()) || 0);
+        });
+        $('#storm-radius').change(function() {
+            Hyperparams.stormRadius = Math.max(0, parseInt($('#storm-radius').val()) || 0);
+        });
+        $('#trigger-storm').click(() => {
+            this.engine.env.storms.triggerStorm(null, null, null, 'manual');
+        });
+        $('#download-storm-log').click(() => {
+            this.engine.env.storms.downloadLog();
+        });
 
         $('#evolved-mutation').change( function() {
             if (this.checked) {
@@ -478,6 +493,9 @@ class ControlPanel {
         $('#food-drop-rate').val(Hyperparams.foodDropProb);
         $('#extra-mover-cost').val(Hyperparams.extraMoverFoodCost);
         $('#org-limit').val(Hyperparams.maxOrganisms);
+        $('#storms-enabled').prop('checked', Hyperparams.stormsEnabled);
+        $('#storm-chance').val(Hyperparams.stormChance);
+        $('#storm-radius').val(Hyperparams.stormRadius);
         $('#look-range').val(Hyperparams.lookRange);
         $('#see-through-self').prop('checked', Hyperparams.seeThroughSelf);
         $('#global-mutation').val(Hyperparams.globalMutability);

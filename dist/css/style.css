@@ -278,6 +278,11 @@ input:hover,input:active {
     height: 50px;
     margin: 1px;
 }
+/* the gauge swatch gets a black dot, same as the gauge cell in the world */
+#gauge.cell-type,
+#gauge.cell-legend-type {
+    background-image: radial-gradient(circle, black 0, black 28%, transparent 30%);
+}
 #editor-mode-cont{
     padding-top: 20px;
 }

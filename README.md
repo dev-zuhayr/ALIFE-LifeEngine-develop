@@ -50,7 +50,7 @@ Organism Cells are only found in organisms, and cannot exist on their own in the
 - Killer - Red, harms organisms in directly adjacent cells (besides itself).
 - Armor - Purple, negates the effects of killer cells.
 - Eye - Light purple with a slit, allows the organism to see and move intelligently. See further description below.
-- Gauge - Amber (brown in the classic scheme), senses how much food is nearby and slows its organism's reproduction when food is scarce. *Implemented by Zuhayr Khot.* See [Gauge Cell](#gauge-cell-implemented-by-zuhayr-khot) below.
+- Gauge - Gold with a black dot in the middle, senses how much food is nearby and slows its organism's reproduction when food is scarce. *Implemented by Zuhayr Khot.* See [Gauge Cell](#gauge-cell-implemented-by-zuhayr-khot) below.
 
 ## Organisms
 Organisms are structures of cells that eat food, reproduce, and die.
@@ -114,5 +114,61 @@ The constants at the top of `src/Organism/Cell/BodyCells/GaugeCell.js` can be ch
 - `src/Organism/Cell/BodyCells/BodyCellFactory.js`: registers `GaugeCell`.
 - `src/Organism/Organism.js`: adds `gauge_penalty` and `gauge_tick`, and adds `gauge_penalty` to `foodNeeded()`.
 - `src/Organism/Perception/Brain.js`: when a saved brain is loaded, adds a default ("ignore") decision for any cell type it doesn't know about, so organisms saved before the gauge cell existed can still be loaded.
-- `src/Rendering/ColorScheme.js`: adds a gauge color to each color scheme.
+- `src/Rendering/ColorScheme.js`: adds a gauge color (gold, with a black dot) to each color scheme. The grayscale scheme stays gray but still gets the dot.
+- `src/Organism/Cell/CellStates.js` also draws the black dot in the middle of the gauge cell, so it can't be mistaken for the mouth.
+- `dist/css/style.css`: draws the same dot on the gauge swatches in the editor and the cell legend.
 - `src/Controllers/EditorController.js` and `dist/index.html`: add the gauge cell to the organism editor and the cell legend.
+
+## Storms (implemented by Zuhayr Khot)
+### Purpose
+Extinction in the simulation can have two very different causes: the organisms doing it to themselves (evolutionary suicide) or something in the environment simply wiping them out. Storms are an outside disturbance we can switch on or off, so a run with storms can be compared with the same run without them. That helps separate extinctions the organisms caused from extinctions the weather caused.
+
+### How it works
+- **Chance:** every tick there is a very small chance that a storm strikes (default **0.02%** per tick, about one storm every 5,000 ticks).
+- **Area:** the storm lands on a random tile and affects a circle around it (default **radius 8 cells**).
+- **Effect:** every organism with at least one cell inside the circle dies, and all food inside the circle is destroyed (including the bodies of the organisms it just killed). Walls are left alone because they are terrain, not life. An organism that is only partly inside the circle still dies, and the part of its body outside the circle turns into food, as with any death.
+- **Look:** the affected circle flashes light blue for about a second. This is only visual.
+- **Time:** a storm happens in a single tick. It is not an ongoing weather system.
+
+### Using it in the simulation
+Open the **Evolution Controls** tab and scroll down to **Storms**:
+- **Storms enabled**: turn storms on or off (they are on by default, so untick this for a no-storm baseline run).
+- **Storm chance (% per tick)** and **Storm radius (cells)**.
+- **Trigger storm now**: strikes a random patch immediately, handy for testing.
+- **Download storm log**: saves the storm log as a `.json` file.
+
+The **Statistics** tab shows how many storms there have been this run, the current storm chance and what the last storm did. The three storm settings are saved and loaded with worlds like the other evolution controls, and "Reset all controls" puts them back to the defaults.
+
+### The storm log
+Every storm adds an entry to a log (kept in memory, and kept when the world auto-resets after total extinction). **It is not part of world save files, so download it before closing the page.** Each entry records:
+
+| Field | Meaning |
+|---|---|
+| `id`, `source` | Storm number, and whether it was `natural` or `manual` (the button) |
+| `tick`, `reset_count` | When it happened, and which run (auto-reset count) |
+| `col`, `row`, `radius` | Where it landed and how big it was |
+| `chance_multiplier`, `modifiers` | The multiplier in effect, and the value of each modifier (e.g. `{"season": 3}`) |
+| `organisms_killed`, `food_destroyed` | What it destroyed |
+| `species_hit`, `species_extinct` | Species it touched, and which of them it drove extinct |
+| `population_after`, `wiped_out_world` | Living organisms left, and whether the storm killed the entire population |
+
+Any extinction listed under `species_extinct` was caused by a storm, so it should not be counted as evolutionary suicide.
+
+### Connecting it to seasons
+The chance of a storm each tick is `Storm chance x (every modifier)`. A modifier is a named function that returns a number: `1` means no change, `3` means three times as likely, `0.5` means half as likely and `0` means no storms. Storms are built so the seasonality modification can plug in with one line, once both exist:
+
+```js
+env.storms.addChanceModifier('season', () => isWinter ? 3 : 0.5);
+```
+
+Swap `isWinter` for however the seasons code reports the current season. The function is called every tick, so the chance follows the season automatically, and each storm in the log records the season multiplier that applied. Use `env.storms.removeChanceModifier('season')` to take it out. A modifier that throws an error or returns something that is not a sensible number is ignored (with a console warning), so it can't crash the simulation. **At the moment seasons are not connected, so storms use the base chance all the time.**
+
+### No hard-coded outcomes
+Storms never choose a species and never force an extinction. They hit a random patch and affect whatever is in it, so whether a lineage survives depends on where it lives and how spread out it is. If a storm ever wipes out the whole population, the engine's normal "reset on total extinction" setting takes over, exactly as it would for any other extinction.
+
+### Files changed
+- `src/Environments/StormSystem.js` (new): all of the storm logic, the modifier hook and the log.
+- `src/Environments/WorldEnvironment.js`: creates the storm system, rolls for a storm at the start of each tick, and draws the flash after the normal drawing.
+- `src/Hyperparameters.js`: adds `stormsEnabled`, `stormChance` and `stormRadius`.
+- `src/Controllers/ControlPanel.js` and `dist/index.html`: add the Storms controls to the Evolution Controls tab and wire them up.
+- `src/Stats/StatsPanel.js` and `dist/index.html`: add the storm line to the Statistics tab.

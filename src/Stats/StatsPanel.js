@@ -58,6 +58,11 @@ class StatsPanel {
             $('#top-species').text("Most Populous Species: None");
         $('#largest-org').text("Largest Organism Ever: " + this.env.largest_cell_count + " cells");
         $('#avg-mut').text("Average Mutation Rate: " + Math.round(this.env.averageMutability() * 100) / 100);
+        let storms = this.env.storms;
+        let last = storms.log.length > 0 ? storms.log[storms.log.length - 1] : null;
+        $('#storm-stats').text("Storms this run: " + storms.stormsInCurrentRun() + " (" + storms.storm_count + " total)" +
+            " | Current storm chance: " + Math.round(storms.currentChance() * 10000) / 10000 + "% per tick" +
+            (last ? " | Last storm: tick " + last.tick + ", killed " + last.organisms_killed + " organisms" : ""));
     }
 
     reset() {

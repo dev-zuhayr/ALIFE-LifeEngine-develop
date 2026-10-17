@@ -10,6 +10,7 @@ const WorldConfig = require('../WorldConfig');
 const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
 const LineageTracker = require('../Stats/LineageTracker');
+const StormSystem = require('./StormSystem');
 
 class WorldEnvironment extends Environment{
     constructor(engine, cell_size) {
@@ -28,10 +29,12 @@ class WorldEnvironment extends Environment{
         this.total_ticks = 0;
         this.data_update_rate = 100;
         this.plant_food_produced = 0; // food made by producer cells since the last sampleFood()
+        this.storms = new StormSystem(this); // random storms, see StormSystem.js
         FossilRecord.setEnv(this);
     }
 
     update() {
+        this.storms.update(); // roll for a storm before anything else moves this tick
         var to_remove = [];
         for (var i in this.organisms) {
             var org = this.organisms[i];
@@ -57,6 +60,7 @@ class WorldEnvironment extends Environment{
         }
         this.renderer.renderCells();
         this.renderer.renderHighlights();
+        this.storms.render(); // draw the storm flash on top
     }
 
     renderFull() {

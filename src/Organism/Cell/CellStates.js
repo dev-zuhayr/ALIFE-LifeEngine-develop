@@ -51,9 +51,23 @@ class Armor extends CellState {
         super('armor');
     }
 }
+// The gauge is a plain colored square with a dot in the middle, so it's easy to
+// tell apart from the mouth (which is also a gold-ish color) at a glance.
+// The dot color comes from the color scheme, see ColorScheme.js.
 class Gauge extends CellState {
     constructor() {
         super('gauge');
+        this.dot_color = 'black';
+    }
+    render(ctx, cell, size) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(cell.x, cell.y, size, size);
+        if (size < 3)
+            return; // too small to draw a dot, just show the square
+        ctx.fillStyle = this.dot_color;
+        ctx.beginPath();
+        ctx.arc(cell.x + size/2, cell.y + size/2, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 class Eye extends CellState {
