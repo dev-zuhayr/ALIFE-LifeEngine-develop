@@ -3,6 +3,7 @@ const Modes = require("./ControlModes");
 const StatsPanel = require("../Stats/StatsPanel");
 const WorldConfig = require("../WorldConfig");
 const LoadController = require("./LoadController");
+const LineageTracker = require("../Stats/LineageTracker");
 const {ColorScheme, color_scheme_names} = require("../Rendering/ColorScheme");
 
 class ControlPanel {
@@ -294,6 +295,17 @@ class ControlPanel {
             downloadEl.click();
             if (was_running)
                 this.setPaused(false);
+        });
+        $('#download-lineage').click( () => {
+            let was_running = this.engine.running;
+            this.setPaused(true);
+            LineageTracker.download($('#lineage-file-name').val());
+            if (was_running)
+                this.setPaused(false);
+        });
+        $('#clear-lineage').click( () => {
+            if (confirm('Delete all logged lineage data? Download it first if you want to keep it.'))
+                LineageTracker.clear();
         });
         $('#load-env').click(() => {
             LoadController.loadJson((env)=>{

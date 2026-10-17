@@ -39,11 +39,11 @@ class GridMap {
         return this.grid[col][row];
     }
 
-    setCellType(col, row, state) {
+    setCellType(col, row, state, food_source) {
         if (!this.isValidLoc(col, row)) {
             return;
         }
-        this.grid[col][row].setType(state);
+        this.grid[col][row].setType(state, food_source);
     }
 
     setCellOwner(col, row, cell_owner) {

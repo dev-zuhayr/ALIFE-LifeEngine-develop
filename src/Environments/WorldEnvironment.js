@@ -9,6 +9,7 @@ const FossilRecord = require('../Stats/FossilRecord');
 const WorldConfig = require('../WorldConfig');
 const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
+const LineageTracker = require('../Stats/LineageTracker');
 const StormSystem = require('./StormSystem');
 
 class WorldEnvironment extends Environment{
@@ -27,6 +28,7 @@ class WorldEnvironment extends Environment{
         this.reset_count = 0;
         this.total_ticks = 0;
         this.data_update_rate = 100;
+        this.plant_food_produced = 0; // food made by producer cells since the last sampleFood()
         this.storms = new StormSystem(this); // random storms, see StormSystem.js
         FossilRecord.setEnv(this);
     }
@@ -47,6 +49,7 @@ class WorldEnvironment extends Environment{
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
             FossilRecord.updateData();
+            LineageTracker.record(this);
         }
     }
 
@@ -111,8 +114,8 @@ class WorldEnvironment extends Environment{
         return this.total_mutability / this.organisms.length;
     }
 
-    changeCell(c, r, state, owner) {
-        super.changeCell(c, r, state, owner);
+    changeCell(c, r, state, owner, food_source) {
+        super.changeCell(c, r, state, owner, food_source);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
         if(state == CellStates.wall)
             this.walls.push(this.grid_map.cellAt(c, r));
@@ -157,9 +160,28 @@ class WorldEnvironment extends Environment{
         }
     }
 
+    // counts food on the grid by source, plus plant food produced since the last call (which resets that counter)
+    sampleFood() {
+        let counts = {total_food: 0, plant_food: 0, corpse_food: 0, other_food: 0};
+        for (let col of this.grid_map.grid) {
+            for (let cell of col) {
+                if (cell.state !== CellStates.food)
+                    continue;
+                counts.total_food++;
+                counts[cell.food_source + '_food']++;
+            }
+        }
+        counts.plant_food_produced = this.plant_food_produced;
+        this.plant_food_produced = 0;
+        return counts;
+    }
+
     reset(confirm_reset=true, reset_life=true) {
         if (confirm_reset && !confirm('The current environment will be lost. Proceed?'))
             return false;
+        // log the state the run ended in (e.g. population 0 on extinction)
+        LineageTracker.record(this, 'end');
+        LineageTracker.newRun();
         let restart = false;
         if (this.engine.running) {
             this.engine.last_fps = this.engine.fps;
@@ -172,6 +194,7 @@ class WorldEnvironment extends Environment{
         this.total_mutability = 0;
         this.total_ticks = 0;
         this.largest_cell_count = 0;
+        this.plant_food_produced = 0;
         FossilRecord.clear_record();
         if (reset_life)
             this.OriginOfLife();
@@ -209,6 +232,7 @@ class WorldEnvironment extends Environment{
 
     loadRaw(env) { // species name->stats map, evolution controls, 
         this.organisms = [];
+        LineageTracker.newRun(); // archive the previous world's lineage tree before it is cleared
         FossilRecord.clear_record();
         let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
         this.resizeGridColRow(cell_size, env.grid.cols, env.grid.rows)
@@ -242,6 +266,24 @@ class WorldEnvironment extends Environment{
             s.name = orgRaw.species_name;
             org.species = s;
         }
+
+        // continue organism ids after the highest loaded id
+        let max_id = -1;
+        for (let org of this.organisms)
+            max_id = Math.max(max_id, org.id);
+        Organism.next_id = max_id + 1;
+
+        // saves from before lineage tracking have no lineage ids; treat each species as its own founder
+        for (let name in species) {
+            let s = species[name];
+            if (s.lineage_id === -1) {
+                s.lineage_id = FossilRecord.next_lineage_id++;
+                s.parent_lineage_id = -1;
+                s.founder_id = s.lineage_id;
+            }
+            FossilRecord.addLineageEntry(s);
+        }
+
         for (let name in species)
             FossilRecord.addSpeciesObj(species[name]);
         FossilRecord.loadRaw(env.fossil_record);

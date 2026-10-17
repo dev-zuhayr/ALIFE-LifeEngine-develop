@@ -11,6 +11,9 @@ const FossilRecord = {
         this.min_discard = 10;
 
         this.record_size_limit = 500; // store this many data points
+
+        this.next_lineage_id = 0; // next lineage id to hand out, incremented in addSpecies
+        this.lineage_tree = {}; // lineage_id -> {parent_lineage_id, founder_id, start_tick, end_tick, cell_counts}
     },
 
     setEnv: function(env) {
@@ -22,7 +25,32 @@ const FossilRecord = {
         var new_species = new Species(org.anatomy, ancestor, this.env.total_ticks);
         this.extant_species[new_species.name] = new_species;
         org.species = new_species;
+        new_species.lineage_id = this.next_lineage_id++;
+        new_species.parent_lineage_id = ancestor ? ancestor.lineage_id : -1;
+        new_species.founder_id = ancestor ? ancestor.founder_id : new_species.lineage_id; //if this species has no ancestor then make its id the founder id
+        this.addLineageEntry(new_species);
         return new_species;
+    },
+
+    // gives a species placed by hand a new root lineage starting at the current tick
+    addFounderLineage: function(species) {
+        species.lineage_id = this.next_lineage_id++;
+        species.parent_lineage_id = -1;
+        species.founder_id = species.lineage_id;
+        species.calcAnatomyDetails(); // the editor may have changed the anatomy since the species was made
+        this.addLineageEntry(species);
+        this.lineage_tree[species.lineage_id].start_tick = this.env.total_ticks;
+        this.lineage_tree[species.lineage_id].end_tick = -1;
+    },
+
+    addLineageEntry: function(species) {
+        this.lineage_tree[species.lineage_id] = {
+            parent_lineage_id: species.parent_lineage_id,
+            founder_id: species.founder_id,
+            start_tick: species.start_tick,
+            end_tick: species.end_tick,
+            cell_counts: Object.assign({}, species.cell_counts),
+        };
     },
 
     addSpeciesObj: function(species) {
@@ -54,6 +82,8 @@ const FossilRecord = {
             return false;
         }
         species.end_tick = this.env.total_ticks;
+        if (this.lineage_tree[species.lineage_id])
+            this.lineage_tree[species.lineage_id].end_tick = species.end_tick;
         species.ancestor = undefined; // garbage collect ancestors
         delete this.extant_species[species.name];
         if (species.cumulative_pop >= this.min_discard) {
@@ -146,6 +176,8 @@ const FossilRecord = {
     clear_record() {
         this.extant_species = [];
         this.extinct_species = [];
+        this.next_lineage_id = 0;
+        this.lineage_tree = {};
         this.setData();
     },
 

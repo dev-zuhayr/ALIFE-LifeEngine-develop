@@ -10,8 +10,10 @@ class Cell{
         this.y = y;
     }
 
-    setType(state) {
+    // food_source records where food came from: 'plant' (producer cells), 'corpse' (dead organisms), or 'other' (random drops, painted, loaded)
+    setType(state, food_source='other') {
         this.state = state;
+        this.food_source = state.name === 'food' ? food_source : null;
     }
 }
 
