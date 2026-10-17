@@ -38,6 +38,13 @@ const Hyperparams = {
         this.stormsEnabled = true;
         this.stormChance = 0.02;   // % chance each tick that a storm hits (before any season modifier is applied)
         this.stormRadius = 8;      // how big the storm patch is, in grid cells
+
+        // Plant seeds (the logic lives in Environments/SeedBank.js)
+        this.seedsEnabled = true;
+        this.seedChance = 10;        // % chance that a dying plant leaves a seed
+        this.seedDelayMin = 200;     // fewest ticks before a seed tries to sprout
+        this.seedDelayMax = 2000;    // most ticks before a seed tries to sprout
+        this.seedMaxDormancy = 5000; // a seed that hasn't sprouted this many ticks after being dropped rots
     },
 
     loadJsonObj(obj) {
