@@ -361,6 +361,21 @@ class ControlPanel {
         $('#food-drop-rate').change(function() {
             Hyperparams.foodDropProb = $('#food-drop-rate').val();
         });
+        $('#food-lifetime').change(function() {
+            Hyperparams.foodLifetime = Math.max(0, parseFloat($('#food-lifetime').val()) || 0);
+        });
+        $('#seasons-enabled').change(function() {
+            Hyperparams.seasonsEnabled = this.checked;
+        });
+        $('#boom-chance').change(function() {
+            Hyperparams.boomChance = Math.max(0, parseFloat($('#boom-chance').val()) || 0);
+        });
+        $('#boom-strength').change(function() {
+            Hyperparams.boomStrength = Math.max(0, parseFloat($('#boom-strength').val()) || 1);
+        });
+        $('#boom-duration').change(function() {
+            Hyperparams.boomDuration = Math.max(0, parseInt($('#boom-duration').val()) || 0);
+        });
         $('#extra-mover-cost').change(function() {
             Hyperparams.extraMoverFoodCost = parseInt($('#extra-mover-cost').val());
         });
@@ -479,6 +494,11 @@ class ControlPanel {
         $('#food-blocks').prop('checked', Hyperparams.foodBlocksReproduction);
         $('#dont-kill-same-species').prop('checked', Hyperparams.dontKillSameSpecies);
         $('#food-drop-rate').val(Hyperparams.foodDropProb);
+        $('#food-lifetime').val(Hyperparams.foodLifetime);
+        $('#seasons-enabled').prop('checked', Hyperparams.seasonsEnabled);
+        $('#boom-chance').val(Hyperparams.boomChance);
+        $('#boom-strength').val(Hyperparams.boomStrength);
+        $('#boom-duration').val(Hyperparams.boomDuration);
         $('#extra-mover-cost').val(Hyperparams.extraMoverFoodCost);
         $('#org-limit').val(Hyperparams.maxOrganisms);
         $('#storms-enabled').prop('checked', Hyperparams.stormsEnabled);

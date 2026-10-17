@@ -34,6 +34,18 @@ const Hyperparams = {
 
         this.maxOrganisms = -1;
 
+        // Food decay and seasons (by Lawton Springbok, the logic lives in
+        // Environments/WorldEnvironment.js)
+        // Average number of ticks a food cell survives before rotting away.
+        // 0 disables decay entirely.
+        this.foodLifetime = 0;
+        // Seasons periodically multiply how productive producer cells are. Off by
+        // default so existing saved worlds behave exactly as they were balanced.
+        this.seasonsEnabled = false;
+        this.boomChance = 0.05;  // percent chance per tick to start a boom
+        this.boomStrength = 4;   // food production multiplier while booming
+        this.boomDuration = 400; // ticks a boom lasts
+
         // Storms (by Zuhayr Khot, the logic lives in Environments/StormSystem.js)
         this.stormsEnabled = true;
         this.stormChance = 0.02;   // % chance each tick that a storm hits (before any season modifier is applied)

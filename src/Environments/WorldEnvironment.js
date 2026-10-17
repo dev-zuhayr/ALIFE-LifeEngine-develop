@@ -11,6 +11,11 @@ const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
 const StormSystem = require('./StormSystem');
 
+// Ticks for the decay cursor to make one full pass over the grid. This is a
+// performance knob, not a balance knob: it bounds how many cells decayFood()
+// inspects per tick while leaving food lifetime grid-size independent.
+const DECAY_SWEEP_TICKS = 60;
+
 class WorldEnvironment extends Environment{
     constructor(engine, cell_size) {
         super();
@@ -28,6 +33,9 @@ class WorldEnvironment extends Environment{
         this.total_ticks = 0;
         this.data_update_rate = 100;
         this.storms = new StormSystem(this); // random storms, see StormSystem.js
+        this.season_multiplier = 1;
+        this.boom_ticks_left = 0;
+        this.decay_cursor = 0;
         FossilRecord.setEnv(this);
     }
 
@@ -41,8 +49,14 @@ class WorldEnvironment extends Environment{
             }
         }
         this.removeOrganisms(to_remove);
+        if (Hyperparams.seasonsEnabled) {
+            this.updateSeason();
+        }
         if (Hyperparams.foodDropProb > 0) {
             this.generateFood();
+        }
+        if (Hyperparams.foodLifetime > 0) {
+            this.decayFood();
         }
         this.total_ticks ++;
         if (this.total_ticks % this.data_update_rate == 0) {
@@ -143,7 +157,7 @@ class WorldEnvironment extends Environment{
     }
 
     generateFood() {
-        var num_food = Math.max(Math.floor(this.grid_map.cols*this.grid_map.rows*Hyperparams.foodDropProb/50000), 1)
+        var num_food = Math.max(Math.floor(this.grid_map.cols*this.grid_map.rows*Hyperparams.foodDropProb*this.season_multiplier/50000), 1)
         var prob = Hyperparams.foodDropProb;
         for (var i=0; i<num_food; i++) {
             if (Math.random() <= prob){
@@ -155,6 +169,50 @@ class WorldEnvironment extends Environment{
                 }
             }
         }
+    }
+
+    // Seasons scale food production through season_multiplier rather than by
+    // writing to Hyperparams, which is serialized into saved worlds -- saving
+    // mid boom would otherwise bake the boosted rate in as the user's setting.
+    // The multiplier is read by ProducerCell.performFunction() and generateFood().
+    updateSeason() {
+        if (this.boom_ticks_left > 0) {
+            this.boom_ticks_left--;
+            if (this.boom_ticks_left === 0)
+                this.season_multiplier = 1;
+            return;
+        }
+        if (Math.random() * 100 < Hyperparams.boomChance) {
+            this.startBoom();
+        }
+    }
+
+    // Also the manual trigger for testing: env.startBoom(5, 500)
+    startBoom(strength=null, duration=null) {
+        this.season_multiplier = strength !== null ? strength : Hyperparams.boomStrength;
+        this.boom_ticks_left = duration !== null ? duration : Hyperparams.boomDuration;
+    }
+
+    // Food decays probabilistically. Rather than scan the whole grid every tick,
+    // a cursor walks a slice of it and completes a full pass every
+    // DECAY_SWEEP_TICKS ticks, which keeps the per tick cost fixed regardless of
+    // grid size or how much food exists. Reading only cell.state means there is
+    // no per cell bookkeeping to fall out of sync with fillGrid, loadRaw or
+    // resize, all of which write the grid without going through changeCell.
+    decayFood() {
+        let cols = this.grid_map.cols;
+        let total = cols * this.grid_map.rows;
+        let budget = Math.max(Math.ceil(total / DECAY_SWEEP_TICKS), 1);
+        let prob = DECAY_SWEEP_TICKS / Hyperparams.foodLifetime;
+        for (let i = 0; i < budget; i++) {
+            let idx = (this.decay_cursor + i) % total;
+            let cell = this.grid_map.cellAt(idx % cols, Math.floor(idx / cols));
+            if (cell != null && cell.state == CellStates.food && Math.random() < prob) {
+                // must go through changeCell so the cell is queued for render
+                this.changeCell(cell.col, cell.row, CellStates.empty, null);
+            }
+        }
+        this.decay_cursor = (this.decay_cursor + budget) % total;
     }
 
     reset(confirm_reset=true, reset_life=true) {
@@ -172,6 +230,9 @@ class WorldEnvironment extends Environment{
         this.total_mutability = 0;
         this.total_ticks = 0;
         this.largest_cell_count = 0;
+        this.season_multiplier = 1;
+        this.boom_ticks_left = 0;
+        this.decay_cursor = 0;
         FossilRecord.clear_record();
         if (reset_life)
             this.OriginOfLife();

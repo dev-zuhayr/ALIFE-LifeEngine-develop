@@ -201,6 +201,21 @@
 						<label for="food-drop-rate" title='Rate at which food is automatically generated and dropped in the world'>Auto food drop rate:</label>
 						<input type="number" id="food-drop-rate" value=0 max="1000">
 						<br>
+						<label for="food-lifetime" title='Average number of ticks a food cell survives before rotting away. 0 disables food decay.'>Avg food lifetime (ticks, 0 = never):</label>
+						<input type="number" id="food-lifetime" value=0 min="0" max="100000">
+						<br>
+						<label for="seasons-enabled" title='When on, producer cells periodically become more productive for a while. Has no effect at a food production probability of 0.'>Enable seasonal booms</label>
+						<input type="checkbox" id="seasons-enabled">
+						<br>
+						<label for="boom-chance" title='Percent chance each tick that a food boom begins.'>Boom chance (% per tick):</label>
+						<input type="number" id="boom-chance" value=0.05 min="0" max="100" step="0.01">
+						<br>
+						<label for="boom-strength" title='Producer cell food production is multiplied by this much while a boom is active. Caps out once foodProdProb x strength reaches 100.'>Boom strength (x):</label>
+						<input type="number" id="boom-strength" value=4 min="0" max="100" step="0.1">
+						<br>
+						<label for="boom-duration" title='How many ticks a food boom lasts.'>Boom duration (ticks):</label>
+						<input type="number" id="boom-duration" value=400 min="0" max="100000">
+						<br>
 						<label for="insta-kill" title='When on, killer cells immediately kill organisms they touch. When off, organisms have as much health as they have cells and only take 1 damage from killer cells.'>One touch kill</label>
 						<input type="checkbox" id="insta-kill">
 						<br>
