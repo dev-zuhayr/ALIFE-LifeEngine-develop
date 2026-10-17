@@ -11,6 +11,7 @@ const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
 const LineageTracker = require('../Stats/LineageTracker');
 const StormSystem = require('./StormSystem');
+const SeedBank = require('./SeedBank');
 
 class WorldEnvironment extends Environment{
     constructor(engine, cell_size) {
@@ -30,6 +31,7 @@ class WorldEnvironment extends Environment{
         this.data_update_rate = 100;
         this.plant_food_produced = 0; // food made by producer cells since the last sampleFood()
         this.storms = new StormSystem(this); // random storms, see StormSystem.js
+        this.seeds = new SeedBank(this); // dormant plant seeds, see SeedBank.js
         FossilRecord.setEnv(this);
     }
 
@@ -43,6 +45,7 @@ class WorldEnvironment extends Environment{
             }
         }
         this.removeOrganisms(to_remove);
+        this.seeds.update(); // sprout or rot dormant seeds; sprouts start acting next tick
         if (Hyperparams.foodDropProb > 0) {
             this.generateFood();
         }
@@ -195,6 +198,7 @@ class WorldEnvironment extends Environment{
         this.total_ticks = 0;
         this.largest_cell_count = 0;
         this.plant_food_produced = 0;
+        this.seeds.clear();
         FossilRecord.clear_record();
         if (reset_life)
             this.OriginOfLife();
@@ -232,6 +236,7 @@ class WorldEnvironment extends Environment{
 
     loadRaw(env) { // species name->stats map, evolution controls, 
         this.organisms = [];
+        this.seeds.clear(); // seeds from the previous world mustn't sprout into the loaded one
         LineageTracker.newRun(); // archive the previous world's lineage tree before it is cleared
         FossilRecord.clear_record();
         let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
