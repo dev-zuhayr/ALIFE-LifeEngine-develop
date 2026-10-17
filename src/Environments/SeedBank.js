@@ -1,7 +1,7 @@
-const CellStates = require('../Organism/Cell/CellStates');
 const Hyperparams = require('../Hyperparameters');
 const Organism = require('../Organism/Organism');
 const Directions = require('../Organism/Directions');
+const FossilRecord = require('../Stats/FossilRecord');
 
 // Seed bank
 //
@@ -14,12 +14,14 @@ const Directions = require('../Organism/Directions');
 // A "plant" is an organism with producer cells and no mover cells.
 //
 // Sprouting:
-//   - the sprout needs every one of its cells to land on an empty or food tile
-//     (food is overwritten, otherwise a seed would almost always be blocked by
-//     its own parent's corpse). Organisms and walls block it.
+//   - a sprout follows the same placement rules as a normal birth: it needs
+//     room on the grid, it respects "Food blocks reproduction" (so with that on,
+//     food on the spot, including its parent's corpse, blocks it until eaten),
+//     and it respects the organism limit
 //   - a blocked seed tries again a little later
 //   - a seed that hasn't sprouted seedMaxDormancy ticks after being dropped rots
-//   - the sprout is a clone (no mutation) and joins its parent's species
+//   - the sprout is a clone (no mutation) and joins its parent's species,
+//     bringing the species back if it had gone extinct in the meantime
 
 const RETRY_TICKS = 20; // how long a blocked seed waits before trying to sprout again
 
@@ -93,22 +95,12 @@ class SeedBank {
         let org = new Organism(seed.col, seed.row, env, seed.parent);
         if (Hyperparams.rotationEnabled)
             org.rotation = Directions.getRandomDirection();
-        if (!this.canSprout(org))
+        if (!org.isClear(seed.col, seed.row)) // the same check a normal birth uses
             return false;
-        env.addOrganism(org); // draws the sprout on the grid, overwriting any food under it
+        env.addOrganism(org); // draws the sprout on the grid (removing food under it if food doesn't block)
+        if (org.species.extinct)
+            FossilRecord.resurrect(org.species);
         org.species.addPop();
-        return true;
-    }
-
-    // Every cell of the sprout has to land on an empty or food tile
-    canSprout(org) {
-        for (let cell of org.anatomy.cells) {
-            let grid_cell = org.getRealCell(cell);
-            if (grid_cell == null || grid_cell.owner != null)
-                return false;
-            if (grid_cell.state !== CellStates.empty && grid_cell.state !== CellStates.food)
-                return false;
-        }
         return true;
     }
 
