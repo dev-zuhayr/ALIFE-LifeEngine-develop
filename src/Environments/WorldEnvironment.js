@@ -11,12 +11,12 @@ const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
 const LineageTracker = require('../Stats/LineageTracker');
 const StormSystem = require('./StormSystem');
+const SeedBank = require('./SeedBank');
+const Perlin = require('../Utils/Perlin');
 
 // Ticks for the decay cursor to make one full pass over the grid. This is a
 // performance knob, not a balance knob: it bounds how many cells decayFood()
 // inspects per tick while leaving food lifetime grid-size independent.
-const SeedBank = require('./SeedBank');
-const Perlin = require('../Utils/Perlin');
 const DECAY_SWEEP_TICKS = 60;
 
 class WorldEnvironment extends Environment{
@@ -325,6 +325,10 @@ class WorldEnvironment extends Environment{
     loadRaw(env) { // species name->stats map, evolution controls, 
         this.organisms = [];
         this.seeds.clear(); // seeds from the previous world mustn't sprout into the loaded one
+        // saves restore these below (overwriteNonObjects); older saves without them start out of season
+        this.season_multiplier = 1;
+        this.boom_ticks_left = 0;
+        this.decay_cursor = 0;
         LineageTracker.newRun(); // archive the previous world's lineage tree before it is cleared
         FossilRecord.clear_record();
         let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
