@@ -44,6 +44,7 @@ function makeEnv({cols = 200, rows = 120, life = true} = {}) {
         grid_map: new GridMap(cols, rows, 5), organisms: [], walls: [], total_mutability: 0,
         largest_cell_count: 0, reset_count: 0, total_ticks: 0, data_update_rate: 100,
         plant_food_produced: 0, num_cols: cols, num_rows: rows,
+        season_multiplier: 1, boom_ticks_left: 0, decay_cursor: 0,
     });
     env.storms = new StormSystem(env);
     env.seeds = new SeedBank(env);

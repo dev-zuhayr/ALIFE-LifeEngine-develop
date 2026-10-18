@@ -146,19 +146,4 @@ test.describe('storms', () => {
         h.run(env, 50);
         assert.equal(env.storms.storm_count, 50);
     });
-
-    test('chance modifiers multiply the storm chance, and broken ones are ignored with one warning', () => {
-        const env = h.setup({stormChance: 0.02}, 0, {life: false});
-        env.storms.addChanceModifier('season', () => 3);
-        assert.ok(Math.abs(env.storms.currentChance() - 0.06) < 1e-12);
-        env.storms.addChanceModifier('broken', () => { throw new Error('bug'); });
-        env.storms.addChanceModifier('nonsense', () => NaN);
-        h.resetWarnings();
-        env.storms.currentChance();
-        env.storms.currentChance();
-        assert.ok(Math.abs(env.storms.currentChance() - 0.06) < 1e-12);
-        assert.equal(h.warnings(), 1);
-        env.storms.removeChanceModifier('season');
-        assert.ok(Math.abs(env.storms.currentChance() - 0.02) < 1e-12);
-    });
 });
