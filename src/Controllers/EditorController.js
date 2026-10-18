@@ -121,6 +121,9 @@ class EditorController extends CanvasController{
                 case "gauge":
                     self.edit_cell_type = CellStates.gauge;
                     break;
+                case "wings":
+                    self.edit_cell_type = CellStates.wings;
+                    break;
             }
             $(".cell-type" ).css( "border-color", "black" );
             var selected = '#'+this.id+'.cell-type';

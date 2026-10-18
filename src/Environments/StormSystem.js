@@ -10,6 +10,7 @@ const Hyperparams = require('../Hyperparameters');
 //   - all the food inside the patch is destroyed (including the corpses of
 //     the organisms it just killed, so nothing is left lying around)
 //   - walls stay, because they're terrain and not living stuff
+//   - dormant plant seeds inside the patch are destroyed too (see SeedBank.js)
 //
 // It never picks a species and never forces an extinction. Whether a lineage
 // makes it depends on where it happens to be and how spread out it is. A
@@ -93,6 +94,8 @@ class StormSystem {
             if (cell.state !== CellStates.empty)
                 env.changeCell(cell.col, cell.row, CellStates.empty, null);
         }
+        // ...and the seeds lying in it, including any the dead plants just dropped inside the circle
+        let seeds_destroyed = env.seeds.destroyInArea(col, row, radius);
 
         // 4. Write down what happened
         let species_extinct = [];
@@ -116,6 +119,7 @@ class StormSystem {
             radius: radius,
             organisms_killed: organisms_killed,
             food_destroyed: food_destroyed,
+            seeds_destroyed: seeds_destroyed,
             species_hit: Array.from(species_hit, s => s.name),
             species_extinct: species_extinct,
             population_after: population_after,

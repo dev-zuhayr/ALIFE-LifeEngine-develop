@@ -24,6 +24,9 @@ const Hyperparams = {
         this.instaKill = false;
         this.dontKillSameSpecies = false;
 
+        this.wingsCanMutate = true;
+        this.islandsEnabled = true; // water and islands are generated when a world starts or resets
+
         this.lookRange = 30;
         this.seeThroughSelf = false;
         this.evolveIndependentEyeDecisions = true;
@@ -50,6 +53,14 @@ const Hyperparams = {
         this.stormsEnabled = true;
         this.stormChance = 0.02;   // % chance each tick that a storm hits
         this.stormRadius = 8;      // how big the storm patch is, in grid cells
+
+        // Plant seeds (the logic lives in Environments/SeedBank.js)
+        this.seedsEnabled = true;
+        this.seedChance = 10;        // % chance that a dying plant leaves a seed
+        this.seedDelayMin = 200;     // fewest ticks before a seed tries to sprout
+        this.seedDelayMax = 2000;    // most ticks before a seed tries to sprout
+        this.seedMaxDormancy = 5000; // a seed that hasn't sprouted this many ticks after being dropped rots
+        this.seedScatterRadius = 3;  // seeds land on a random tile up to this many cells from the plant's center (0 = on it)
     },
 
     loadJsonObj(obj) {

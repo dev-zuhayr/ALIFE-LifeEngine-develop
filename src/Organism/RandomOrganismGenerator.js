@@ -1,6 +1,7 @@
 const CellStates = require("./Cell/CellStates");
 const Organism = require("./Organism");
 const Brain = require("./Perception/Brain")
+const Hyperparams = require("../Hyperparameters");
 
 class RandomOrganismGenerator {
 
@@ -54,7 +55,10 @@ class RandomOrganismGenerator {
 
         var neighbors = organism.anatomy.getNeighborsOfCell(x, y);
         if (neighbors.length && Math.random() < spawnChance) {
-            organism.anatomy.addRandomizedCell(CellStates.getRandomLivingType(), x, y);
+            let state = CellStates.getRandomLivingType();
+            while (state == CellStates.wings && !Hyperparams.wingsCanMutate)
+                state = CellStates.getRandomLivingType();
+            organism.anatomy.addRandomizedCell(state, x, y);
             return true;
         }
         return false;

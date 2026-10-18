@@ -126,7 +126,7 @@ Extinction in the simulation can have two very different causes: the organisms d
 ### How it works
 - **Chance:** every tick there is a very small chance that a storm strikes (default **0.02%** per tick, about one storm every 5,000 ticks).
 - **Area:** the storm lands on a random tile and affects a circle around it (default **radius 8 cells**).
-- **Effect:** every organism with at least one cell inside the circle dies, and all food inside the circle is destroyed (including the bodies of the organisms it just killed). Walls are left alone because they are terrain, not life. An organism that is only partly inside the circle still dies, and the part of its body outside the circle turns into food, as with any death.
+- **Effect:** every organism with at least one cell inside the circle dies, and all food inside the circle is destroyed (including the bodies of the organisms it just killed). Walls are left alone because they are terrain, not life. An organism that is only partly inside the circle still dies, and the part of its body outside the circle turns into food, as with any death. Dormant plant seeds inside the circle are destroyed too (see [Plant Seeds](#plant-seeds)).
 - **Look:** the affected circle flashes light blue for about a second. This is only visual.
 - **Time:** a storm happens in a single tick. It is not an ongoing weather system.
 
@@ -148,7 +148,7 @@ Every storm adds an entry to a log (kept in memory, and kept when the world auto
 | `tick`, `reset_count` | When it happened, and which run (auto-reset count) |
 | `col`, `row`, `radius` | Where it landed and how big it was |
 | `chance_multiplier`, `modifiers` | The multiplier in effect, and the value of each modifier (e.g. `{"season": 3}`) |
-| `organisms_killed`, `food_destroyed` | What it destroyed |
+| `organisms_killed`, `food_destroyed`, `seeds_destroyed` | What it destroyed |
 | `species_hit`, `species_extinct` | Species it touched, and which of them it drove extinct |
 | `population_after`, `wiped_out_world` | Living organisms left, and whether the storm killed the entire population |
 
@@ -172,3 +172,55 @@ Storms never choose a species and never force an extinction. They hit a random p
 - `src/Hyperparameters.js`: adds `stormsEnabled`, `stormChance` and `stormRadius`.
 - `src/Controllers/ControlPanel.js` and `dist/index.html`: add the Storms controls to the Evolution Controls tab and wire them up.
 - `src/Stats/StatsPanel.js` and `dist/index.html`: add the storm line to the Statistics tab.
+
+## Plant Seeds
+### Purpose
+When the plant population crashes, food stops being produced and everything that depends on it starves. Seeds give plants a way to come back: a dying plant can leave a seed that sprouts after a random delay. This lets us test whether food can recover after a crash, and whether a lineage that looks extinct is really gone or only waiting in the soil.
+
+### How it works
+- **Who leaves seeds:** a plant is any organism with producer cells and no mover cells. When a plant dies of old age, killer cells or a storm, it leaves a seed with probability **Seed chance** (default **10%**). Organisms removed by hand (the kill tool, or drawing walls over them) never leave seeds.
+- **Where it falls:** on a random tile within **Seed scatter radius** cells of the plant's center (default **3**). Seeds are not drawn on the grid and nothing can eat them.
+- **When it sprouts:** after a random delay between **Sprout delay min** and **max** (default **200** to **2000** ticks).
+- **Same rules as a normal birth:** the sprout needs room on the grid, respects **Food blocks reproduction** and respects the organism limit. If it's blocked, it tries again every 20 ticks on the same spot. Scattering is what lets seeds find room after a total die-off: each plant's body turns into food where it stood, and with nothing alive to eat it, a seed dropped exactly there could never sprout.
+- **Rotting:** a seed that still hasn't sprouted **Seed rots after** ticks after falling (default **5000**) is gone.
+- **What sprouts:** an exact copy of the parent (no mutation) that joins the parent's species. If that species had died out in the meantime, it comes back: it's listed as extant again, keeps its lineage IDs, and its `revivals` count goes up by one.
+- **Storms** destroy every seed inside their circle, including seeds that the plants they just killed dropped inside it.
+- **Extinction and auto-reset:** while seeds are still dormant, life can come back, so the world is only auto-reset (or auto-paused) once there are no organisms **and** no seeds left.
+
+### Settings
+All of these are in the **Evolution Controls** tab under **Seeds**. They're saved and loaded with worlds and controls files, and "Reset all controls" puts them back to the defaults.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Seeds enabled | on | Whether dying plants can leave seeds. Seeds already in the ground still sprout or rot when this is off. |
+| Seed chance (% per plant death) | 10 | Chance that a dying plant leaves a seed. 0 gives a no-seed baseline. |
+| Sprout delay min / max (ticks) | 200 / 2000 | Each seed waits a random number of ticks in this range before it first tries to sprout. |
+| Seed rots after (ticks) | 5000 | A seed that hasn't sprouted this long after falling rots. |
+| Seed scatter radius (cells) | 3 | How far from the dying plant a seed can land. 0 drops it exactly where the plant was. |
+
+The **Statistics** tab shows how many seeds are dormant, and how many have been dropped, sprouted, rotted and destroyed by storms this run.
+
+### The data
+- **Lineage CSV** (`lineages.csv`): six new columns at the end of each row:
+  - `seed_chance`: the chance in effect, or 0 when seeds are off.
+  - `seeds_dormant`: seeds waiting right now.
+  - `seeds_dropped`, `seeds_sprouted`, `seeds_rotted`, `seeds_destroyed`: counts since the previous sample.
+
+  A row with `population` 0 and `seeds_dormant` above 0 means nothing is alive but the world hasn't ended yet.
+- **Lineage tree CSV** (`lineages_tree.csv`): a new `revivals` column at the end, showing how many times each lineage came back from seed after going extinct.
+- **Storm log:** each storm records `seeds_destroyed`.
+- **World saves** include the dormant seeds, together with the species of seeds whose species has died out, so they can still bring it back after loading. Older saves without seeds still load.
+
+### No hard-coded outcomes
+Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted.
+
+### Files changed
+- `src/Environments/SeedBank.js` (new): dropping, scattering, sprouting and rotting seeds, storm destruction, the counters, and saving and loading.
+- `src/Hyperparameters.js`: adds `seedsEnabled`, `seedChance`, `seedDelayMin`, `seedDelayMax`, `seedMaxDormancy` and `seedScatterRadius`.
+- `src/Organism/Organism.js`: `die(leave_seed = true)` asks the seed bank for a seed before the body turns to food.
+- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, saves and loads it, and only auto-resets once no organisms and no seeds are left.
+- `src/Controllers/EnvironmentController.js`: deaths caused by hand leave no seeds.
+- `src/Environments/StormSystem.js`: storms destroy seeds in their circle and log `seeds_destroyed`.
+- `src/Stats/FossilRecord.js` and `src/Stats/Species.js`: species brought back from seed are extant again, with `end_tick` -1 and a `revivals` count.
+- `src/Stats/LineageTracker.js`: the seed columns and the `revivals` column.
+- `src/Controllers/ControlPanel.js`, `src/Stats/StatsPanel.js` and `dist/index.html`: the Seeds controls and the Statistics line.

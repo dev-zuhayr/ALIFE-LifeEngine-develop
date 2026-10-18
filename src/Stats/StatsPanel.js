@@ -3,6 +3,7 @@ const SpeciesChart = require("./Charts/SpeciesChart");
 const MutationChart = require("./Charts/MutationChart");
 const CellsChart = require("./Charts/CellsChart");
 const FossilRecord = require("./FossilRecord");
+const Hyperparams = require("../Hyperparameters");
 
 
 const ChartSelections = [PopulationChart, SpeciesChart, CellsChart, MutationChart];
@@ -63,6 +64,11 @@ class StatsPanel {
         $('#storm-stats').text("Storms this run: " + storms.stormsInCurrentRun() + " (" + storms.storm_count + " total)" +
             " | Current storm chance: " + Math.round(storms.currentChance() * 10000) / 10000 + "% per tick" +
             (last ? " | Last storm: tick " + last.tick + ", killed " + last.organisms_killed + " organisms" : ""));
+        let seeds = this.env.seeds;
+        $('#seed-stats').text("Seeds this run: " + seeds.count() + " dormant" +
+            " | dropped " + seeds.dropped + ", sprouted " + seeds.sprouted + ", rotted " + seeds.rotted +
+            ", destroyed by storms " + seeds.destroyed +
+            " | Seed chance: " + (Hyperparams.seedsEnabled ? Hyperparams.seedChance + "% per plant death" : "off"));
     }
 
     reset() {
