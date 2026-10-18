@@ -73,7 +73,7 @@ class EnvironmentController extends CanvasController{
                 if (noise > noise_threshold && noise < noise_threshold + thickness/resolution) {
                     let cell = this.env.grid_map.cellAt(c, r);
                     if (cell != null) {
-                        if(cell.owner != null) cell.owner.die();
+                        if(cell.owner != null) cell.owner.die(false); // killed by hand, so no seed
                         this.env.changeCell(c, r, CellStates.wall, null);
                     }
                 }
@@ -171,6 +171,11 @@ class EnvironmentController extends CanvasController{
         var new_org = new Organism(col, row, this.env, organism);
 
         if (new_org.isClear(col, row)) {
+            // the same organism loaded into the editor again has a new species object with the same name;
+            // join the species already in the world so both copies share one lineage
+            let extant = FossilRecord.extant_species[new_org.species.name];
+            if (extant && extant !== new_org.species)
+                new_org.species = extant;
             let new_species = !FossilRecord.speciesIsExtant(new_org.species.name);
             if (new_org.species.extinct) {
                 FossilRecord.resurrect(new_org.species);
@@ -180,12 +185,17 @@ class EnvironmentController extends CanvasController{
                 new_org.species.start_tick = this.env.total_ticks;
                 new_org.species.population = 0;
             }
+            // a placed organism whose species isn't currently alive starts its own lineage.
+            // its old lineage id may be from an earlier run, so it is never reused
+            if (new_species)
+                FossilRecord.addFounderLineage(new_org.species);
 
             this.env.addOrganism(new_org);
             new_org.species.addPop();
             return true;
         }
         return false;
+        //
     }
 
     dropCellType(col, row, state, killBlocking=false, ignoreState=null) {
@@ -196,7 +206,7 @@ class EnvironmentController extends CanvasController{
             if (cell == null)
                 continue;
             if (killBlocking && cell.owner != null){
-                cell.owner.die();
+                cell.owner.die(false); // killed by hand, so no seed
             }
             else if (cell.owner != null) {
                 continue;
@@ -231,7 +241,7 @@ class EnvironmentController extends CanvasController{
             var r = this.cur_cell.row + loc[1];
             var cell = this.env.grid_map.cellAt(c, r);
             if (cell != null && cell.owner != null)
-                cell.owner.die();
+                cell.owner.die(false); // killed by hand, so no seed
         }
     }
 

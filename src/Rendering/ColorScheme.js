@@ -11,9 +11,10 @@ const color_schemes = {
         "killer":"#F82380",
         "armor":"#7230DB",
         "eye":"#B6C1EA",
-        "gauge":"#F2994A",
+        "gauge":"#FFD700",
+        "gauge-dot":"black",
         "eye-slit": "#0E1318",
-        "wings":"#FFD700",
+        "wings":"#dc6bba",
         "water": "#021d38"
     },
     "classic":{
@@ -26,7 +27,8 @@ const color_schemes = {
         "killer":"red",
         "armor":"purple",
         "eye":"yellow",
-        "gauge":"brown",
+        "gauge":"gold",
+        "gauge-dot":"black",
         "eye-slit": "#121D29",
         "wings":"#FFD700",
         "water": "#021d38"
@@ -41,7 +43,8 @@ const color_schemes = {
         "killer":"#B06B85",
         "armor":"#7C69B5",
         "eye":"#AEB4C2",
-        "gauge":"#C08A5B",
+        "gauge":"#E8BE2E",
+        "gauge-dot":"black",
         "eye-slit": "#0B0E11",
         "wings":"#FFD700",
         "water": "#021d38"
@@ -56,7 +59,8 @@ const color_schemes = {
         "killer":"#992E5E",
         "armor":"#5632B5",
         "eye":"#8892B3",
-        "gauge":"#A0612A",
+        "gauge":"#C9A21A",
+        "gauge-dot":"black",
         "eye-slit": "black",
         "wings":"#FFD700",
         "water": "#021d38"
@@ -72,6 +76,7 @@ const color_schemes = {
         "armor":"#999999",
         "eye":"#888888",
         "gauge":"#666666",
+        "gauge-dot":"black",
         "eye-slit": "black",
         "wings":"#FFD700",
         "water": "#021d38"
@@ -95,6 +100,7 @@ class ColorSchemeSingleton {
             state.color = color_scheme[state.name];
         }
         CellStates.eye.slit_color=color_scheme['eye-slit']
+        CellStates.gauge.dot_color=color_scheme['gauge-dot']
         for (var cell_type in color_scheme) {
             $('#'+cell_type+'.cell-type ').css('background-color', color_scheme[cell_type]);
             $('#'+cell_type+'.cell-legend-type').css('background-color', color_scheme[cell_type]);

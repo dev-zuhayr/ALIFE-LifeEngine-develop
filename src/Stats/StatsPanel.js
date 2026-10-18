@@ -3,6 +3,7 @@ const SpeciesChart = require("./Charts/SpeciesChart");
 const MutationChart = require("./Charts/MutationChart");
 const CellsChart = require("./Charts/CellsChart");
 const FossilRecord = require("./FossilRecord");
+const Hyperparams = require("../Hyperparameters");
 
 
 const ChartSelections = [PopulationChart, SpeciesChart, CellsChart, MutationChart];
@@ -58,6 +59,16 @@ class StatsPanel {
             $('#top-species').text("Most Populous Species: None");
         $('#largest-org').text("Largest Organism Ever: " + this.env.largest_cell_count + " cells");
         $('#avg-mut').text("Average Mutation Rate: " + Math.round(this.env.averageMutability() * 100) / 100);
+        let storms = this.env.storms;
+        let last = storms.log.length > 0 ? storms.log[storms.log.length - 1] : null;
+        $('#storm-stats').text("Storms this run: " + storms.stormsInCurrentRun() + " (" + storms.storm_count + " total)" +
+            " | Current storm chance: " + Math.round(storms.currentChance() * 10000) / 10000 + "% per tick" +
+            (last ? " | Last storm: tick " + last.tick + ", killed " + last.organisms_killed + " organisms" : ""));
+        let seeds = this.env.seeds;
+        $('#seed-stats').text("Seeds this run: " + seeds.count() + " dormant" +
+            " | dropped " + seeds.dropped + ", sprouted " + seeds.sprouted + ", rotted " + seeds.rotted +
+            ", destroyed by storms " + seeds.destroyed +
+            " | Seed chance: " + (Hyperparams.seedsEnabled ? Hyperparams.seedChance + "% per plant death" : "off"));
     }
 
     reset() {

@@ -6,9 +6,12 @@ const Anatomy = require("./Anatomy");
 const Brain = require("./Perception/Brain");
 const FossilRecord = require("../Stats/FossilRecord");
 const SerializeHelper = require("../Utils/SerializeHelper");
-
+const LineageTracker = require("../Stats/LineageTracker")
 class Organism {
     constructor(col, row, env, parent=null) {
+        this.id = Organism.next_id++;
+        this.parent_id = -1;
+        this.generation = 0;
         this.c = col;
         this.r = row;
         this.env = env;
@@ -74,6 +77,8 @@ class Organism {
     }
 
     inherit(parent) {
+        this.parent_id = parent.id;
+        this.generation = parent.generation + 1;
         this.move_range = parent.move_range;
         this.mutability = parent.mutability;
         this.species = parent.species;
@@ -345,11 +350,14 @@ class Organism {
         }
     }
 
-    die() {
+    // leave_seed: false for deaths that shouldn't leave a seed behind (see SeedBank.js)
+    die(leave_seed=true) {
+        if (leave_seed && this.living && this.env.seeds)
+            this.env.seeds.tryLeaveSeed(this);
         for (var cell of this.anatomy.cells) {
             var real_c = this.c + cell.rotatedCol(this.rotation);
             var real_r = this.r + cell.rotatedRow(this.rotation);
-            this.env.changeCell(real_c, real_r, CellStates.food, null);
+            this.env.changeCell(real_c, real_r, CellStates.food, null, 'corpse');
         }
         this.species.decreasePop();
         this.living = false;
@@ -482,5 +490,7 @@ class Organism {
     }
 
 }
+
+Organism.next_id = 0;
 
 module.exports = Organism;
