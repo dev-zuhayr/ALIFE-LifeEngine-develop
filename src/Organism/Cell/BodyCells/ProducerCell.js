@@ -14,7 +14,7 @@ class ProducerCell extends BodyCell{
         var env = this.org.env;
         // Seasons scale how productive plants are, rather than raining extra food
         // from nowhere. The organism editor has no season state, hence the fallback.
-        var prob = Hyperparams.foodProdProb * (env.season_multiplier || 1);
+        var prob = Hyperparams.foodProdProb * (env.season_multiplier !== undefined ? env.season_multiplier : 1);
         var real_c = this.getRealCol();
         var real_r = this.getRealRow();
         if (Math.random() * 100 <= prob) {

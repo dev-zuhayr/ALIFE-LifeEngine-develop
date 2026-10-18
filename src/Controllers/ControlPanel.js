@@ -383,7 +383,9 @@ class ControlPanel {
             Hyperparams.boomChance = Math.max(0, parseFloat($('#boom-chance').val()) || 0);
         });
         $('#boom-strength').change(function() {
-            Hyperparams.boomStrength = Math.max(0, parseFloat($('#boom-strength').val()) || 1);
+            let strength = parseFloat($('#boom-strength').val());
+            Hyperparams.boomStrength = isNaN(strength) ? 1 : Math.max(0, strength); // 0 is allowed (a "bust")
+            $('#boom-strength').val(Hyperparams.boomStrength);
         });
         $('#boom-duration').change(function() {
             Hyperparams.boomDuration = Math.max(0, parseInt($('#boom-duration').val()) || 0);
