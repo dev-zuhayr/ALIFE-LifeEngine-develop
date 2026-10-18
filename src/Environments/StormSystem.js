@@ -18,21 +18,6 @@ const Hyperparams = require('../Hyperparameters');
 // species died out) so we can tell extinctions caused by weather apart from
 // extinctions the organisms did to themselves, which is what matters for
 // evolutionary suicide.
-//
-// ---- Hooking this up to seasons ----
-// The chance of a storm each tick is:   stormChance  x  every modifier
-//
-// A modifier is just a named function that returns a number:
-//     1 = no change, 2 = twice as likely, 0.5 = half as likely, 0 = no storms
-//
-// So once the seasons code exists, all that's needed is one line, run after
-// both systems have been created:
-//
-//     env.storms.addChanceModifier('season', () => isWinter ? 3 : 0.5);
-//
-// (swap `isWinter` for however the seasons code tells us what season it is).
-// The function gets called every tick so the chance follows the season by
-// itself. To take it back out: env.storms.removeChanceModifier('season').
 
 const FLASH_MS = 1200;                    // how long a storm stays tinted on screen (real time, not ticks)
 const FLASH_COLOR = 'rgba(190, 215, 255, 0.55)';
@@ -40,8 +25,6 @@ const FLASH_COLOR = 'rgba(190, 215, 255, 0.55)';
 class StormSystem {
     constructor(env) {
         this.env = env;
-        this.modifiers = {};              // name -> function that returns a chance multiplier
-        this.warned = {};                 // modifiers that have already complained about an error
         this.log = [];                    // one entry per storm, kept even when the world auto-resets
         this.flashes = [];                // storms currently tinted on screen (just for looks)
         this.storm_count = 0;
@@ -56,51 +39,9 @@ class StormSystem {
             this.triggerStorm();
     }
 
-    // ---- Chance modifiers (this is where seasons plug in) ----
-
-    addChanceModifier(name, fn) {
-        this.modifiers[name] = fn;
-    }
-
-    removeChanceModifier(name) {
-        delete this.modifiers[name];
-        delete this.warned[name];
-    }
-
-    // What each modifier says right now, e.g. {season: 3}
-    modifierValues() {
-        let values = {};
-        for (let name in this.modifiers) {
-            let value = 1;
-            try {
-                value = this.modifiers[name](this.env);
-            } catch (e) {
-                // someone else's modifier has a bug, don't let it crash the whole sim
-                if (!this.warned[name]) {
-                    console.warn('Storm chance modifier "' + name + '" threw an error and is being ignored:', e);
-                    this.warned[name] = true;
-                }
-                value = 1;
-            }
-            // anything that isn't a sane number gets treated as "no change"
-            if (typeof value !== 'number' || !isFinite(value) || value < 0)
-                value = 1;
-            values[name] = value;
-        }
-        return values;
-    }
-
-    chanceMultiplier() {
-        let multiplier = 1;
-        let values = this.modifierValues();
-        for (let name in values)
-            multiplier *= values[name];
-        return multiplier;
-    }
-
     // The real chance of a storm this tick, as a percent (0 to 100)
     currentChance() {
-        return Math.min(100, Math.max(0, Hyperparams.stormChance * this.chanceMultiplier()));
+        return Math.min(100, Math.max(0, Hyperparams.stormChance));
     }
 
     // ---- The storm itself ----
@@ -116,12 +57,6 @@ class StormSystem {
         if (radius === null)
             radius = Hyperparams.stormRadius;
         radius = Math.max(0, Math.floor(radius));
-
-        // note down the conditions at the moment it hit, for the log
-        let modifier_values = this.modifierValues();
-        let multiplier = 1;
-        for (let name in modifier_values)
-            multiplier *= modifier_values[name];
 
         // 1. Work out what's inside the circle
         let area = [];
@@ -179,8 +114,6 @@ class StormSystem {
             col: col,
             row: row,
             radius: radius,
-            chance_multiplier: multiplier,
-            modifiers: modifier_values,
             organisms_killed: organisms_killed,
             food_destroyed: food_destroyed,
             species_hit: Array.from(species_hit, s => s.name),

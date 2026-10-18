@@ -48,7 +48,7 @@ const Hyperparams = {
 
         // Storms (by Zuhayr Khot, the logic lives in Environments/StormSystem.js)
         this.stormsEnabled = true;
-        this.stormChance = 0.02;   // % chance each tick that a storm hits (before any season modifier is applied)
+        this.stormChance = 0.02;   // % chance each tick that a storm hits
         this.stormRadius = 8;      // how big the storm patch is, in grid cells
     },
 
