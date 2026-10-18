@@ -25,6 +25,7 @@ const Hyperparams = {
         this.dontKillSameSpecies = false;
 
         this.wingsCanMutate = true;
+        this.islandsEnabled = true; // water and islands are generated when a world starts or resets
 
         this.lookRange = 30;
         this.seeThroughSelf = false;

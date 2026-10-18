@@ -62,8 +62,10 @@
 							<div class='cell-legend-type' id='armor' title="Armor: Negates affects of killer cell."></div>
 							<div class='cell-legend-type' id='eye' title="Eye: Observes cells and decides movement."></div>
 							<div class='cell-legend-type' id='gauge' title="Gauge: Senses nearby food and slows reproduction when food is scarce."></div>
+							<div class='cell-legend-type' id='wings' title="Wings: Lets a moving organism cross water."></div>
 							<div class='cell-legend-type' id='food' title="Food: Not part of an organism. Once an organism has eaten enough food, it will reproduce."></div>
 							<div class='cell-legend-type' id='wall' title="Wall: Not part of an organism. Blocks movement and reproduction."></div>
+							<div class='cell-legend-type' id='water' title="Water: Not part of an organism. Only organisms with wings and mover cells (and no producer cells) can cross it."></div>
 						</div>
 						<div id="color-scheme-container">
 							<label for="color-scheme-select">Color Scheme:</label>
@@ -216,6 +218,9 @@
 						<br>
 						<label for="wings-can-mutate" title='When on, mutation and random organisms can create wing cells (animal bodies only). When off, new mutations never create wing cells; existing wings are not removed.'>Wings can mutate</label>
 						<input type="checkbox" id="wings-can-mutate" checked>
+						<br>
+						<label for="islands-enabled" title='When on, the world is split into islands separated by water. Takes effect on the next reset; the current world keeps its water until then.'>Islands enabled</label>
+						<input type="checkbox" id="islands-enabled" checked>
 
 						
 					</div>
