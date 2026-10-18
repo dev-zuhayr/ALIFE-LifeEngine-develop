@@ -14,8 +14,8 @@ const color_schemes = {
         "gauge":"#FFD700",
         "gauge-dot":"black",
         "eye-slit": "#0E1318",
-        "wings":"#dc6bba",
-        "water": "#021d38"
+        "wings":"#FF7A33",
+        "water":"#0A2A4A"
     },
     "classic":{
         "empty":"#121D29",
@@ -30,8 +30,8 @@ const color_schemes = {
         "gauge":"gold",
         "gauge-dot":"black",
         "eye-slit": "#121D29",
-        "wings":"#FFD700",
-        "water": "#021d38"
+        "wings":"cyan",
+        "water":"#0B3D6B"
     },
     "soft":{
         "empty":"#0B0E11",
@@ -46,8 +46,8 @@ const color_schemes = {
         "gauge":"#E8BE2E",
         "gauge-dot":"black",
         "eye-slit": "#0B0E11",
-        "wings":"#FFD700",
-        "water": "#021d38"
+        "wings":"#D9824B",
+        "water":"#14283A"
     },
     "dark":{
         "empty":"black",
@@ -62,8 +62,8 @@ const color_schemes = {
         "gauge":"#C9A21A",
         "gauge-dot":"black",
         "eye-slit": "black",
-        "wings":"#FFD700",
-        "water": "#021d38"
+        "wings":"#B8622E",
+        "water":"#0A1A2E"
     },
     "grayscale":{
         "empty":"black",
@@ -78,8 +78,8 @@ const color_schemes = {
         "gauge":"#666666",
         "gauge-dot":"black",
         "eye-slit": "black",
-        "wings":"#FFD700",
-        "water": "#021d38"
+        "wings":"#555555",
+        "water":"#222222"
     }
 }
 const color_scheme_names = Object.keys(color_schemes);
