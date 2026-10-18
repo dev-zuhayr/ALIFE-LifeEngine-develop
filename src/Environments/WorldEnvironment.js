@@ -97,7 +97,8 @@ class WorldEnvironment extends Environment{
     }
 
     OriginOfLife() {
-        this.generateIslands(); 
+        if (Hyperparams.islandsEnabled) // checked here, so changing the setting takes effect on the next reset
+            this.generateIslands();
         var center = this.grid_map.getCenter();
         var org = new Organism(center[0], center[1], this);
         org.anatomy.addDefaultCell(CellStates.mouth, 0, 0);
@@ -130,6 +131,10 @@ class WorldEnvironment extends Environment{
     }
 
     changeCell(c, r, state, owner, food_source) {
+        //*************************************** */Water Addition
+        // vacated water tiles revert to water instead of empty
+        if (state == CellStates.empty && this.isWater(c, r))
+            state = CellStates.water;
         super.changeCell(c, r, state, owner, food_source);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
         if(state == CellStates.wall)
@@ -336,16 +341,6 @@ class WorldEnvironment extends Environment{
     isWater(c, r) {
         const cell = this.grid_map.cellAt(c, r);
         return !!cell && cell.is_water === true;
-    }
-
-    changeCell(c, r, state, owner) {
-        // vacated water tiles revert to water instead of empty
-        if (state == CellStates.empty && this.isWater(c, r))
-            state = CellStates.water;
-        super.changeCell(c, r, state, owner);
-        this.renderer.addToRender(this.grid_map.cellAt(c, r));
-        if (state == CellStates.wall)
-            this.walls.push(this.grid_map.cellAt(c, r));
     }
 
     clearWater() {
