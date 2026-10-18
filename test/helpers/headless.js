@@ -53,11 +53,12 @@ function makeEnv({cols = 200, rows = 120, life = true} = {}) {
     return env;
 }
 
-// Default settings (storms off, so they don't interfere unless a test turns them on),
+// Default settings (storms and islands off, so they don't interfere unless a test turns them on),
 // then `params` on top, then `ticks` ticks of simulation.
 function setup(params = {}, ticks = 3000, env_options = {}) {
     Hyperparams.setDefaults();
     Hyperparams.stormsEnabled = false;
+    Hyperparams.islandsEnabled = false;
     Object.assign(Hyperparams, params);
     WorldConfig.auto_reset = true;
     WorldConfig.auto_pause = false;

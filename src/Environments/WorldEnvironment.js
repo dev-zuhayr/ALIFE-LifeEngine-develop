@@ -12,6 +12,7 @@ const Species = require('../Stats/Species');
 const LineageTracker = require('../Stats/LineageTracker');
 const StormSystem = require('./StormSystem');
 const SeedBank = require('./SeedBank');
+const Perlin = require('../Utils/Perlin');
 
 class WorldEnvironment extends Environment{
     constructor(engine, cell_size) {
@@ -96,6 +97,8 @@ class WorldEnvironment extends Environment{
     }
 
     OriginOfLife() {
+        if (Hyperparams.islandsEnabled) // checked here, so changing the setting takes effect on the next reset
+            this.generateIslands();
         var center = this.grid_map.getCenter();
         var org = new Organism(center[0], center[1], this);
         org.anatomy.addDefaultCell(CellStates.mouth, 0, 0);
@@ -106,6 +109,7 @@ class WorldEnvironment extends Environment{
     }
 
     addOrganism(organism) {
+        organism.stripUselessWings(); // catches saved worlds and editor drops; no-op for normal births
         organism.updateGrid();
         this.total_mutability += organism.mutability;
         this.organisms.push(organism);
@@ -127,6 +131,10 @@ class WorldEnvironment extends Environment{
     }
 
     changeCell(c, r, state, owner, food_source) {
+        //*************************************** */Water Addition
+        // vacated water tiles revert to water instead of empty
+        if (state == CellStates.empty && this.isWater(c, r))
+            state = CellStates.water;
         super.changeCell(c, r, state, owner, food_source);
         this.renderer.addToRender(this.grid_map.cellAt(c, r));
         if(state == CellStates.wall)
@@ -202,6 +210,9 @@ class WorldEnvironment extends Environment{
         }
         this.organisms = [];
         this.grid_map.fillGrid(CellStates.empty, !WorldConfig.clear_walls_on_reset);
+        //*************************************** */Water Addition
+        this.clearWater();  
+        //*************************************** */
         this.renderer.renderFullGrid(this.grid_map.grid);
         this.total_mutability = 0;
         this.total_ticks = 0;
@@ -241,6 +252,12 @@ class WorldEnvironment extends Environment{
         env.fossil_record = FossilRecord.serialize();
         env.seed_bank = this.seeds.serialize();
         env.controls = Hyperparams;
+        //*************************************** */Water Addition
+        env.water = [];
+        for (let c = 0; c < this.grid_map.cols; c++)
+            for (let r = 0; r < this.grid_map.rows; r++)
+                if (this.grid_map.cellAt(c, r).is_water) env.water.push([c, r]);
+        //*************************************** */
         return env;
     }
 
@@ -252,6 +269,13 @@ class WorldEnvironment extends Environment{
         let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
         this.resizeGridColRow(cell_size, env.grid.cols, env.grid.rows)
         this.grid_map.loadRaw(env.grid);
+        //********************** */ Water Addition
+        this.clearWater();
+        for (const [c, r] of (env.water || [])) {
+            const cell = this.grid_map.cellAt(c, r);
+            if (cell) { cell.is_water = true; if (cell.state == CellStates.empty) cell.state = CellStates.water; }
+        }
+        //********************** */
         for (let wall of env.grid.walls) {
             this.walls.push(this.grid_map.cellAt(wall.c, wall.r));
         }
@@ -311,6 +335,67 @@ class WorldEnvironment extends Environment{
         if ($('#override-controls').is(':checked'))
             Hyperparams.loadJsonObj(env.controls)
         this.renderer.renderFullGrid(this.grid_map.grid);
+    }
+
+    //*************************************** */Water Addition
+    isWater(c, r) {
+        const cell = this.grid_map.cellAt(c, r);
+        return !!cell && cell.is_water === true;
+    }
+
+    clearWater() {
+        for (let c = 0; c < this.grid_map.cols; c++)
+            for (let r = 0; r < this.grid_map.rows; r++)
+                this.grid_map.cellAt(c, r).is_water = false;
+    }
+
+    /*generateIslands(num_islands = 6, land_fraction = 0.35, wobble = 0.3, spacing = 2.6) {
+        const cols = this.grid_map.cols, rows = this.grid_map.rows;
+        const R = Math.sqrt(land_fraction * cols * rows / (num_islands * Math.PI));
+        const center = this.grid_map.getCenter();
+        const centres = [{c: center[0], r: center[1]}];   // island 1 holds the start
+        for (let tries = 0; centres.length < num_islands && tries < 5000; tries++) {
+            const c = R + Math.random() * (cols - 2 * R);
+            const r = R + Math.random() * (rows - 2 * R);
+            if (centres.every(p => Math.hypot(p.c - c, p.r - r) > spacing * R))
+                centres.push({c, r});
+        }
+        console.log('islands placed:', centres.length, 'of', num_islands, 'radius', R.toFixed(1));
+        Perlin.seed();
+        const scale = 0.08;
+        let water = 0;
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const cell = this.grid_map.cellAt(c, r);
+                if (cell.state != CellStates.empty) continue;
+                let d = Infinity;
+                for (const p of centres) d = Math.min(d, Math.hypot(c - p.c, r - p.r));
+                const edge = R * (1 + wobble * 1.4 * Perlin.get(c * scale, r * scale));
+                if (d > edge) {
+                    cell.is_water = true;
+                    this.changeCell(c, r, CellStates.water, null);
+                    water++;
+                }
+            }
+        }
+        console.log('water %:', (100 * water / (cols * rows)).toFixed(1));
+    }*/
+   generateIslands(scale = 0.04, water_below = 0.008, spawn_clear_radius = 8) {
+        console.log('generateIslands called', this.grid_map.cols, this.grid_map.rows);
+        Perlin.seed(); // new random layout; skip this line when loading a saved world
+        const center = this.grid_map.getCenter(); // [col, row], same call OriginOfLife uses
+        for (let c = 0; c < this.grid_map.cols; c++) {
+            for (let r = 0; r < this.grid_map.rows; r++) {
+                const cell = this.grid_map.cellAt(c, r);
+                if (cell.state != CellStates.empty) continue;
+                // keep the starting area dry so the first organism isn't in the ocean
+                if (Math.hypot(c - center[0], r - center[1]) < spawn_clear_radius) continue;
+                if (Perlin.get(c * scale, r * scale) < water_below) {
+                    cell.is_water = true;
+                    this.changeCell(c, r, CellStates.water, null);
+                }
+            }
+        }
     }
 }
 

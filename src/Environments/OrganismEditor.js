@@ -106,6 +106,7 @@ class OrganismEditor extends Environment{
         this.grid_map.fillGrid(CellStates.empty);
 
         this.organism = RandomOrganismGenerator.generate(this);
+        this.organism.stripUselessWings();
         this.organism.updateGrid();
         this.organism.species = new Species(this.organism.anatomy, null, 0);
         this.updateCloneRef();
@@ -120,6 +121,7 @@ class OrganismEditor extends Environment{
 
         for (let i=0; i<numOrganisms; i++) {
             let newOrganism = RandomOrganismGenerator.generate(this);
+            newOrganism.stripUselessWings();
             newOrganism.species = new Species(newOrganism.anatomy, null, 0);
             var col = Math.floor(size + (Math.random() * (env.grid_map.cols-(size*2)) ) );
             var row = Math.floor(size + (Math.random() * (env.grid_map.rows-(size*2)) ) );
