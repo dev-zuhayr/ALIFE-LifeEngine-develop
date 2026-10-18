@@ -295,7 +295,10 @@ class Organism {
         }
     }
 
-    die() {
+    // leave_seed: false for deaths that shouldn't leave a seed behind (see SeedBank.js)
+    die(leave_seed=true) {
+        if (leave_seed && this.living && this.env.seeds)
+            this.env.seeds.tryLeaveSeed(this);
         for (var cell of this.anatomy.cells) {
             var real_c = this.c + cell.rotatedCol(this.rotation);
             var real_r = this.r + cell.rotatedRow(this.rotation);

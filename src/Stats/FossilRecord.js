@@ -13,7 +13,7 @@ const FossilRecord = {
         this.record_size_limit = 500; // store this many data points
 
         this.next_lineage_id = 0; // next lineage id to hand out, incremented in addSpecies
-        this.lineage_tree = {}; // lineage_id -> {parent_lineage_id, founder_id, start_tick, end_tick, cell_counts}
+        this.lineage_tree = {}; // lineage_id -> {parent_lineage_id, founder_id, start_tick, end_tick, revivals, cell_counts}
     },
 
     setEnv: function(env) {
@@ -49,6 +49,7 @@ const FossilRecord = {
             founder_id: species.founder_id,
             start_tick: species.start_tick,
             end_tick: species.end_tick,
+            revivals: species.revivals || 0,
             cell_counts: Object.assign({}, species.cell_counts),
         };
     },
@@ -96,6 +97,13 @@ const FossilRecord = {
     resurrect: function(species) {
         if (species.extinct) {
             species.extinct = false;
+            species.end_tick = -1; // alive again, so it hasn't ended
+            species.revivals = (species.revivals || 0) + 1;
+            let lineage = this.lineage_tree[species.lineage_id];
+            if (lineage) {
+                lineage.end_tick = -1;
+                lineage.revivals = species.revivals;
+            }
             this.extant_species[species.name] = species;
             delete this.extinct_species[species.name];
         }

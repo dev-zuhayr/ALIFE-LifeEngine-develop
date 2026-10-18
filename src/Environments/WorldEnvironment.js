@@ -11,6 +11,7 @@ const SerializeHelper = require('../Utils/SerializeHelper');
 const Species = require('../Stats/Species');
 const LineageTracker = require('../Stats/LineageTracker');
 const StormSystem = require('./StormSystem');
+const SeedBank = require('./SeedBank');
 
 class WorldEnvironment extends Environment{
     constructor(engine, cell_size) {
@@ -30,10 +31,12 @@ class WorldEnvironment extends Environment{
         this.data_update_rate = 100;
         this.plant_food_produced = 0; // food made by producer cells since the last sampleFood()
         this.storms = new StormSystem(this); // random storms, see StormSystem.js
+        this.seeds = new SeedBank(this); // dormant plant seeds, see SeedBank.js
         FossilRecord.setEnv(this);
     }
 
     update() {
+        let had_seeds = this.seeds.count() > 0;
         this.storms.update(); // roll for a storm before anything else moves this tick
         var to_remove = [];
         for (var i in this.organisms) {
@@ -43,6 +46,10 @@ class WorldEnvironment extends Environment{
             }
         }
         this.removeOrganisms(to_remove);
+        this.seeds.update(); // sprout or rot dormant seeds; sprouts start acting next tick
+        // nothing alive and the last dormant seed just went, so life is really over
+        if (had_seeds && this.organisms.length === 0 && this.seeds.count() === 0)
+            this.handleExtinction();
         if (Hyperparams.foodDropProb > 0) {
             this.generateFood();
         }
@@ -73,13 +80,18 @@ class WorldEnvironment extends Environment{
             this.total_mutability -= this.organisms[i].mutability;
             this.organisms.splice(i, 1);
         }
-        if (this.organisms.length === 0 && start_pop > 0) {
-            if (WorldConfig.auto_pause)
-                $('.pause-button')[0].click();
-            else if(WorldConfig.auto_reset) {
-                this.reset_count++;
-                this.reset(false);
-            }
+        // with seeds still dormant life can come back, so wait for them to sprout or rot (see update())
+        if (this.organisms.length === 0 && start_pop > 0 && this.seeds.count() === 0)
+            this.handleExtinction();
+    }
+
+    // total extinction: no organisms and no dormant seeds
+    handleExtinction() {
+        if (WorldConfig.auto_pause)
+            $('.pause-button')[0].click();
+        else if(WorldConfig.auto_reset) {
+            this.reset_count++;
+            this.reset(false);
         }
     }
 
@@ -131,7 +143,7 @@ class WorldEnvironment extends Environment{
 
     clearOrganisms() {
         for (var org of this.organisms)
-            org.die();
+            org.die(false); // cleared by hand, so no seeds
         this.organisms = [];
     }
     
@@ -195,6 +207,7 @@ class WorldEnvironment extends Environment{
         this.total_ticks = 0;
         this.largest_cell_count = 0;
         this.plant_food_produced = 0;
+        this.seeds.clear();
         FossilRecord.clear_record();
         if (reset_life)
             this.OriginOfLife();
@@ -226,12 +239,14 @@ class WorldEnvironment extends Environment{
             env.organisms.push(org.serialize());
         }
         env.fossil_record = FossilRecord.serialize();
+        env.seed_bank = this.seeds.serialize();
         env.controls = Hyperparams;
         return env;
     }
 
     loadRaw(env) { // species name->stats map, evolution controls, 
         this.organisms = [];
+        this.seeds.clear(); // seeds from the previous world mustn't sprout into the loaded one
         LineageTracker.newRun(); // archive the previous world's lineage tree before it is cleared
         FossilRecord.clear_record();
         let cell_size = env.grid.cell_size ? env.grid.cell_size : this.grid_map.cell_size;
@@ -267,15 +282,20 @@ class WorldEnvironment extends Environment{
             org.species = s;
         }
 
-        // continue organism ids after the highest loaded id
+        // dormant seeds (saves from before seeds existed have none). Seeds whose species has died
+        // out come back with that species, which stays extinct until one of them sprouts.
+        let seed_species = env.seed_bank ? this.seeds.loadRaw(env.seed_bank, species) : [];
+
+        // continue organism ids after the highest loaded id, counting the seeds' dead parents too
         let max_id = -1;
         for (let org of this.organisms)
             max_id = Math.max(max_id, org.id);
+        for (let seed of this.seeds.seeds)
+            max_id = Math.max(max_id, seed.parent.id);
         Organism.next_id = max_id + 1;
 
         // saves from before lineage tracking have no lineage ids; treat each species as its own founder
-        for (let name in species) {
-            let s = species[name];
+        for (let s of Object.values(species).concat(seed_species)) {
             if (s.lineage_id === -1) {
                 s.lineage_id = FossilRecord.next_lineage_id++;
                 s.parent_lineage_id = -1;

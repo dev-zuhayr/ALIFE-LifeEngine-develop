@@ -262,6 +262,25 @@
 						<button id='trigger-storm' title='Strike a random patch of the world with a storm right now.'>Trigger storm now</button>
 						<button id='download-storm-log' title='Download a .json record of every storm (time, place, organisms killed, species hit and species made extinct).'>Download storm log</button>
 						<br>
+						<h4 title='A dying plant can leave a seed that sprouts into a copy of it after a random delay, so plants can come back after a crash.'>Seeds</h4>
+						<label for="seeds-enabled" title='When on, dying plants can leave seeds. Seeds already in the ground still sprout or rot when this is turned off.'>Seeds enabled</label>
+						<input type="checkbox" id="seeds-enabled" checked>
+						<br>
+						<label for="seed-chance" title='Percent chance that a plant (producer cells, no mover cells) leaves a seed when it dies of old age, killer cells or a storm. Organisms killed by hand never leave seeds.'>Seed chance (% per plant death):</label>
+						<input type="number" id="seed-chance" min="0" max="100" value=10 step="1">
+						<br>
+						<label for="seed-delay-min" title='Fewest ticks a seed waits before it first tries to sprout.'>Sprout delay min (ticks):</label>
+						<input type="number" id="seed-delay-min" min="0" max="100000" value=200 step="50">
+						<br>
+						<label for="seed-delay-max" title='Most ticks a seed waits before it first tries to sprout. Each seed picks a random delay between min and max.'>Sprout delay max (ticks):</label>
+						<input type="number" id="seed-delay-max" min="0" max="100000" value=2000 step="50">
+						<br>
+						<label for="seed-max-dormancy" title='A seed that still has not sprouted this many ticks after falling rots. A seed is blocked by the same things that block a normal birth, and retries every 20 ticks.'>Seed rots after (ticks):</label>
+						<input type="number" id="seed-max-dormancy" min="0" max="100000" value=5000 step="100">
+						<br>
+						<label for="seed-scatter-radius" title='Seeds land on a random tile up to this many cells from the dying plant. 0 drops the seed exactly where the plant was, where its own body (now food) can block it.'>Seed scatter radius (cells):</label>
+						<input type="number" id="seed-scatter-radius" min="0" max="100" value=3 step="1">
+						<br>
 						<a id="download-el" style="display: none;"></a>
 						<input id="upload-hyperparams" style="display: none;" type="file">
 					</div>
@@ -275,6 +294,7 @@
 						<p id='largest-org'>Largest Organism Ever: </p>
 						<p id='avg-mut'>Average Mutation Rate: </p>
 						<p id='storm-stats'>Storms: </p>
+						<p id='seed-stats'>Seeds: </p>
 						<label for="chart-option">Chart: </label>
 						<select name="chart-option" id="chart-option">
 							<option value="population">Population</option>

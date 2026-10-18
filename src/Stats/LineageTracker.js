@@ -1,5 +1,6 @@
 const CellStates = require("../Organism/Cell/CellStates");
 const FossilRecord = require("./FossilRecord");
+const Hyperparams = require("../Hyperparameters");
 
 // Logs per-lineage population, cell type counts and world food levels, and exports them as CSV.
 // Rows persist across resets so a run that ends in extinction can be analysed afterwards;
@@ -16,13 +17,15 @@ const LineageTracker = {
         return ['run_id', 'tick', 'event', 'lineage_id', 'parent_lineage_id', 'founder_id', 'population']
             .concat(this.cell_names)
             .concat(['total_pop', 'num_lineages', 'total_food', 'plant_food', 'corpse_food', 'other_food',
-                     'plant_food_produced', 'avg_mutability'])
+                     'plant_food_produced', 'avg_mutability',
+                     'seed_chance', 'seeds_dormant', 'seeds_dropped', 'seeds_sprouted', 'seeds_rotted', 'seeds_destroyed'])
             .join(',');
     },
 
     treeHeader: function() {
         return ['run_id', 'lineage_id', 'parent_lineage_id', 'founder_id', 'start_tick', 'end_tick']
             .concat(this.cell_names)
+            .concat(['revivals'])
             .join(',');
     },
 
@@ -51,8 +54,12 @@ const LineageTracker = {
         }
 
         let food = env.sampleFood();
+        // seed counts are since the last sample, except seeds_dormant which is how many are waiting right now
+        let seeds = env.seeds.sampleCounts();
         let world = [total_pop, Object.keys(lineages).length, food.total_food, food.plant_food, food.corpse_food,
-                     food.other_food, food.plant_food_produced, env.averageMutability().toFixed(3)];
+                     food.other_food, food.plant_food_produced, env.averageMutability().toFixed(3),
+                     Hyperparams.seedsEnabled ? Hyperparams.seedChance : 0, env.seeds.count(),
+                     seeds.dropped, seeds.sprouted, seeds.rotted, seeds.destroyed];
 
         // with no living organisms, still log a row so the extinction shows up in the data
         if (total_pop === 0) {
@@ -84,6 +91,7 @@ const LineageTracker = {
             let t = tree[id];
             rows.push([run_id, id, t.parent_lineage_id, t.founder_id, t.start_tick, t.end_tick]
                 .concat(this.cell_names.map(name => t.cell_counts ? t.cell_counts[name] : 0))
+                .concat([t.revivals || 0])
                 .join(','));
         }
         return rows;
