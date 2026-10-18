@@ -8,7 +8,8 @@
     "experiment:seeds": "node test/experiments/seed-recovery.js",
     "build": "webpack --mode=production",
     "build-dev": "webpack --mode=development",
-    "build-watch": "webpack --watch --mode=development"
+    "build-watch": "webpack --watch --mode=development",
+    "start": "node serve.js"
   },
   "repository": {
     "type": "git",

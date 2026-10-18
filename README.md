@@ -29,6 +29,8 @@ To load custom creations (found in `/dist/assets`), you must have a simple web s
 - Production mode (minified): `npm run build`
 - Watch mode (dev mode that auto-builds when you save a file): `npm run build-watch`
 - Dev mode (better error messages): `npm run build-dev` 
+- Local web server, an alternative to the python one above: `npm start`, then open `http://localhost:8000/`
+- Tests (runs the simulation headless in Node): `npm test`
 
 
 # How the Simulation Works
@@ -147,27 +149,17 @@ Every storm adds an entry to a log (kept in memory, and kept when the world auto
 | `id`, `source` | Storm number, and whether it was `natural` or `manual` (the button) |
 | `tick`, `reset_count` | When it happened, and which run (auto-reset count) |
 | `col`, `row`, `radius` | Where it landed and how big it was |
-| `chance_multiplier`, `modifiers` | The multiplier in effect, and the value of each modifier (e.g. `{"season": 3}`) |
 | `organisms_killed`, `food_destroyed`, `seeds_destroyed` | What it destroyed |
 | `species_hit`, `species_extinct` | Species it touched, and which of them it drove extinct |
 | `population_after`, `wiped_out_world` | Living organisms left, and whether the storm killed the entire population |
 
 Any extinction listed under `species_extinct` was caused by a storm, so it should not be counted as evolutionary suicide.
 
-### Connecting it to seasons
-The chance of a storm each tick is `Storm chance x (every modifier)`. A modifier is a named function that returns a number: `1` means no change, `3` means three times as likely, `0.5` means half as likely and `0` means no storms. Storms are built so the seasonality modification can plug in with one line, once both exist:
-
-```js
-env.storms.addChanceModifier('season', () => isWinter ? 3 : 0.5);
-```
-
-Swap `isWinter` for however the seasons code reports the current season. The function is called every tick, so the chance follows the season automatically, and each storm in the log records the season multiplier that applied. Use `env.storms.removeChanceModifier('season')` to take it out. A modifier that throws an error or returns something that is not a sensible number is ignored (with a console warning), so it can't crash the simulation. **At the moment seasons are not connected, so storms use the base chance all the time.**
-
 ### No hard-coded outcomes
 Storms never choose a species and never force an extinction. They hit a random patch and affect whatever is in it, so whether a lineage survives depends on where it lives and how spread out it is. If a storm ever wipes out the whole population, the engine's normal "reset on total extinction" setting takes over, exactly as it would for any other extinction.
 
 ### Files changed
-- `src/Environments/StormSystem.js` (new): all of the storm logic, the modifier hook and the log.
+- `src/Environments/StormSystem.js` (new): all of the storm logic and the log.
 - `src/Environments/WorldEnvironment.js`: creates the storm system, rolls for a storm at the start of each tick, and draws the flash after the normal drawing.
 - `src/Hyperparameters.js`: adds `stormsEnabled`, `stormChance` and `stormRadius`.
 - `src/Controllers/ControlPanel.js` and `dist/index.html`: add the Storms controls to the Evolution Controls tab and wire them up.
@@ -224,3 +216,65 @@ Seeds never guarantee recovery. A seed only sprouts if there's room for it by th
 - `src/Stats/FossilRecord.js` and `src/Stats/Species.js`: species brought back from seed are extant again, with `end_tick` -1 and a `revivals` count.
 - `src/Stats/LineageTracker.js`: the seed columns and the `revivals` column.
 - `src/Controllers/ControlPanel.js`, `src/Stats/StatsPanel.js` and `dist/index.html`: the Seeds controls and the Statistics line.
+
+## Food Decay and Seasons (implemented by Lawton Springbok)
+### Purpose
+In the original engine, food never goes away until something eats it, so a world can keep a large stockpile of food even after its plants are gone. Food decay makes food a resource that has to be produced continuously. Seasonal booms make plant production vary over time, so we can see whether populations that grow during good times overshoot and collapse afterwards.
+
+### How it works
+- **Decay:** every food tile (plant food, corpses and dropped food alike) rots after **Avg food lifetime** ticks on average. Rotted food becomes an empty tile, or water on a water tile. To keep the cost per tick fixed, the grid is checked in slices: every tile is checked once every 60 ticks, with a chance of `60 / lifetime` of rotting. A lifetime of 60 or less means food rots at its first check.
+- **Booms:** with seasons on, every tick outside a boom has a **Boom chance** of starting one. During a boom, producer cells are **Boom strength** times as likely to make food, and the automatic food drop releases that many times as much food. A boom lasts **Boom duration** ticks, then production goes back to normal. A strength of 0 stops all plant production for the duration (a bust).
+- The boom multiplier is kept on the world, not in the settings, so saving during a boom doesn't save the boosted rate as the setting. World saves do keep the boom that is in progress, and loading a save from before seasons existed starts out of season.
+
+### Settings
+These are in the **Evolution Controls** tab. They're saved and loaded with worlds and controls files, and "Reset all controls" puts them back to the defaults.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Avg food lifetime (ticks, 0 = never) | 0 | Average number of ticks a food tile lasts. 0 turns decay off. |
+| Enable seasonal booms | off | Whether booms can happen. |
+| Boom chance (% per tick) | 0.05 | Chance per tick that a boom starts. |
+| Boom strength (x) | 4 | Food production multiplier during a boom. |
+| Boom duration (ticks) | 400 | How long a boom lasts. |
+
+Both are off by default, so existing saved worlds behave as they were balanced.
+
+### Files changed
+- `src/Environments/WorldEnvironment.js`: `decayFood()`, `updateSeason()` and `startBoom()`. The boom state is cleared on reset, and saved and loaded with worlds.
+- `src/Organism/Cell/BodyCells/ProducerCell.js`: production is multiplied by the boom multiplier.
+- `src/Hyperparameters.js`: adds `foodLifetime`, `seasonsEnabled`, `boomChance`, `boomStrength` and `boomDuration`.
+- `src/Controllers/ControlPanel.js` and `dist/index.html`: the controls.
+- `serve.js` (new): a small local web server (`npm start`).
+
+## Islands and Wings (implemented by Miguel Lavarinhas)
+### Purpose
+In a single open world, a species that overexploits its food can spread everywhere and take every population down with it. Islands split the world into patches separated by water, so populations can be isolated from each other. Wings let animals cross the water, so whether moving between islands helps or hurts a lineage is left to evolution.
+
+### How it works
+- **Islands:** when a world starts or resets with **Islands enabled**, Perlin noise turns roughly half of the map into water (47–56% in headless tests). The area within 8 cells of the first organism is always land. The layout is new every time.
+- **Water:** organisms that can't fly can't move onto water, and they can't be born or sprout onto it. A tile that an organism or food leaves turns back into water. Food can lie on water, for example when a flying organism dies over it.
+- **Who can fly:** an organism flies if it has at least one wings cell, at least one mover cell and no producer cells.
+- **Wings mutation:** with **Wings can mutate** on, mutation can create wings cells, but only in animals (mover cells and no producer cells). An organism that isn't an animal loses any wings it has: on mutation, when it's placed in the world and when it's generated randomly. A wings cell in the centre becomes a mouth, because the centre cell can't be removed.
+- **Saving:** water is saved with worlds. Older saves without water load as flat worlds.
+
+### Settings
+These are in the **Evolution Controls** tab, saved and loaded with worlds and controls files.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Wings can mutate | on | Whether mutation and random organisms can create wings cells. Existing wings are kept when this is turned off. |
+| Islands enabled | on | Whether worlds are generated with islands. **Takes effect on the next reset**; the current world keeps its water, or stays flat, until then. |
+
+### Known quirks
+- Eyes see water as a cell type, so an eye stops at the first water tile and doesn't see food beyond it.
+- Gauge cells count water tiles in the area they sense, so near the coast they read a lower food density.
+- A seed that lands on water can never sprout, and rots.
+- "Reset with this organism" from the editor gives a world with no water.
+
+### Files changed
+- `src/Environments/WorldEnvironment.js`: island generation, water on tiles that are vacated, and saving and loading water.
+- `src/Organism/Organism.js`: who can fly, water blocking movement and births, wings only for animals.
+- `src/Organism/Cell/BodyCells/WingsCell.js` (new), `src/Organism/Cell/CellStates.js` and `src/Organism/Cell/BodyCells/BodyCellFactory.js`: the wings and water cell types.
+- `src/Organism/RandomOrganismGenerator.js` and `src/Environments/OrganismEditor.js`: random organisms follow the wings rules.
+- `src/Rendering/ColorScheme.js`: wings and water colours for each colour scheme.
+- `src/Hyperparameters.js`, `src/Controllers/ControlPanel.js`, `src/Controllers/EditorController.js` and `dist/index.html`: the settings, the wings cell in the editor, and the wings and water legend entries.
