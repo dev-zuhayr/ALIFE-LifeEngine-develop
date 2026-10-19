@@ -146,10 +146,7 @@ Every storm adds an entry to a log (kept in memory, and kept when the world auto
 
 Any extinction listed under `species_extinct` was caused by a storm, so it should not be counted as evolutionary suicide.
 
-### No hard-coded outcomes
-The gauge cell never kills an organism and never blocks reproduction completely. It only changes the food cost of a child, based on what it measures in the world at that moment, and it gives its own organism no direct advantage. Storms never choose a species and never force an extinction. They hit a random patch and affect whatever is in it, so whether a lineage survives depends on where it lives and how spread out it is. If a storm ever wipes out the whole population, the engine's normal "reset on total extinction" setting takes over, exactly as it would for any other extinction. Any survival or extinction outcome is therefore emergent.
-
-### Known quirks
+### Additional Info
 - The storm chance is a fixed setting. It doesn't change with the seasonal booms.
 - A gauge cell is also a body cell, so it makes the body one cell bigger. That raises the base food cost of every child, even when food is plentiful.
 - A gauge works the same way on any organism that carries one, including plants.
