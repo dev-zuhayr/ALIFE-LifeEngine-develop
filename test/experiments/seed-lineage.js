@@ -2,7 +2,8 @@
 // without seeds, and writes the lineage CSVs to files. Every other project feature is off: storms,
 // islands, wings, gauge cells, food decay and seasonal booms.
 //
-//     npm run experiment:lineage -- [--worlds 8] [--ticks 10000] [--seed 1] [--controls controls.json] [--out dir]
+//     npm run experiment:lineage -- [--worlds 8] [--ticks 10000] [--seed 1] [--controls controls.json]
+//                                   [--world world.json] [--out dir]
 //
 //   --worlds    worlds per condition (default 8)
 //   --ticks     ticks per world (default 10000). A world that goes extinct ends early.
@@ -10,7 +11,11 @@
 //               conditions starts from the same random numbers, so they only differ once seeds matter.
 //   --controls  a controls file saved from the Evolution Controls tab, used instead of the defaults.
 //               The features above are still switched off.
+//   --world     a world saved with "Save World" to start every world from, instead of the single
+//               starting plant. Its settings are used unless --controls is given.
 //   --out       output folder (default test/experiments/output/<date and time>)
+//
+// For many worlds at once, run-batch.js runs several copies of this in parallel.
 //
 // Conditions: "no_seeds" (seed chance 0) and "seeds" (the seed chance from the defaults or --controls).
 // Seed chance 0 rather than seeds disabled, so both conditions make the same random calls.
@@ -25,7 +30,7 @@ const path = require('path');
 const h = require('../helpers/headless');
 const {Hyperparams, WorldConfig, LineageTracker, FossilRecord} = h;
 
-const args = {worlds: 8, ticks: 10000, seed: 1, controls: null, out: null};
+const args = {worlds: 8, ticks: 10000, seed: 1, controls: null, world: null, out: null};
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i].replace(/^--/, '');
@@ -50,15 +55,17 @@ function seededRandom(seed) {
     };
 }
 
-const controls = args.controls ? JSON.parse(fs.readFileSync(args.controls, 'utf8')) : {};
+const world = args.world ? JSON.parse(fs.readFileSync(args.world, 'utf8')) : null;
+const controls = args.controls ? JSON.parse(fs.readFileSync(args.controls, 'utf8')) : (world ? world.controls : {});
 const isolate = {
     stormsEnabled: false, islandsEnabled: false, wingsCanMutate: false, gaugeCanMutate: false,
     foodLifetime: 0, seasonsEnabled: false, seedsEnabled: true,
 };
 const settings = Object.assign({}, controls, isolate);
 
-// world 0 is made by setup(); the rest by reset(), which also archives each finished world's
-// lineage tree and starts a new run_id, the same as a reset in the browser
+// world 0 is a placeholder made by setup(); each real world comes from reset() or, with --world,
+// from loading the save. Both archive the previous world's lineage tree and start a new run_id,
+// the same as a reset or a load in the browser.
 Math.random = seededRandom(args.seed);
 const env = h.setup(settings, 0, {life: false});
 const seed_chance = Hyperparams.seedChance;
@@ -67,14 +74,22 @@ if (seed_chance <= 0)
     console.warn('Warning: the seed chance is 0, so both conditions are the same');
 const conditions = [['no_seeds', 0], ['seeds', seed_chance]];
 
-console.log(`${args.worlds} worlds per condition, ${args.ticks} ticks each, random seed ${args.seed}, seed chance ${seed_chance}%`);
+console.log(`${args.worlds} worlds per condition, ${args.ticks} ticks each, random seed ${args.seed}, seed chance ${seed_chance}%` +
+    (world ? `, starting from ${path.basename(args.world)}` : ''));
 const runs = [];
 const t0 = Date.now();
 for (let k = 0; k < args.worlds; k++) {
     for (const [condition, chance] of conditions) {
         Math.random = seededRandom(args.seed * 100003 + k);
         Hyperparams.seedChance = chance;
-        env.reset(false);
+        if (world) {
+            if (runs.length > 0)
+                LineageTracker.record(env, 'end'); // reset() logs this itself, loading doesn't
+            env.loadRaw(JSON.parse(JSON.stringify(world))); // a fresh copy, since loading changes it
+        }
+        else {
+            env.reset(false);
+        }
         if (runs.length === 0)
             LineageTracker.clear(); // drop the rows reset() logged for the empty placeholder world
         const run_id = LineageTracker.run_id;

@@ -213,11 +213,29 @@ Seeds never guarantee recovery. A seed only sprouts if there's room for it by th
 ### Testing seeds on their own
 `npm run experiment:lineage` runs worlds headless with seeds and the lineage tracker as the only project features: storms, islands, wings, gauge cells, food decay and seasonal booms are all off. It runs each world twice, once with seed chance 0 (the baseline) and once with seeds, and writes `runs.csv` (one row per world: condition, how it ended, final counts), `lineages.csv`, `lineages_tree.csv` and `settings.json` to `test/experiments/output/<date and time>/`. The `run_id` column links the three CSVs.
 
-Options: `--worlds` (per condition, default 8), `--ticks` (per world, default 10000; a world that dies out ends early), `--seed` (default 1; the same seed gives the same results), `--controls <file>` (a controls file saved from the Evolution Controls tab, used instead of the defaults, with the other features still off) and `--out <folder>`. For example: `npm run experiment:lineage -- --worlds 20 --ticks 20000 --controls controls.json`.
+Options: `--worlds` (per condition, default 8), `--ticks` (per world, default 10000; a world that dies out ends early), `--seed` (default 1; the same seed gives the same results), `--controls <file>` (a controls file saved from the Evolution Controls tab, used instead of the defaults, with the other features still off) `--world <file>` (a saved world to start every world from, instead of the single starting plant; its settings are used unless `--controls` is given) and `--out <folder>`. For example: `npm run experiment:lineage -- --worlds 20 --ticks 20000 --controls controls.json`.
 
-To do the same in the browser: turn off storms, seasonal booms, wings and gauge mutation, set food lifetime to 0, turn off islands, then **reset** (islands only change on reset). Use seed chance 0 for the baseline.
+`npm run experiment:batch` does the same with several copies running at once (by default one less than the number of CPU cores), then merges their results into one folder with `run_id` renumbered so it's unique. It takes the same options, plus `--jobs`; `--worlds` is the total per condition (default 28). Each job's own output is kept in `jobs/`, and `npm run experiment:batch -- --merge <batch folder>` merges those again without rerunning them.
+
+To do the same in the browser: turn off storms, seasonal booms, wings and gauge mutation, set food lifetime to 0, turn off islands, then **reset** (islands only change on reset). Use seed chance 0 for the baseline. `test/experiments/controls/seeds-only.json` (seed chance 10%, scatter radius 3) and `seeds-only-baseline.json` (seed chance 0) have these settings ready: load one with **Load controls** in the Evolution Controls tab, then reset. They also work with `--controls`.
+
+`test/experiments/worlds/basic-world.json` is a starting world with the same settings: a 308x146 grid (what **Fill Window** gives at cell size 5 on a 1920x1080 screen at 125% scaling) split into eight patches, each with three `6zwopgo1rm` plants, two `yqqohd0nda` plants and two `yihvwmi3yk` animals (the organisms are in `test/experiments/organisms/`). Load it with **Load World** (keep **Override Evolution Controls** ticked so its settings load too), and don't reset afterwards, or you'll be back to a single starting organism. A saved world keeps its own grid size, so to build it for a different window run `npm run make-world -- --cols <columns> --rows <rows>`.
 
 Even with every project feature off, now and then the plants cover the map with food before animals evolve. Food blocks movement as well as births, so any animals that appear are stuck. This happens in the original engine too (1 of 16 headless worlds with seeds off), and it doesn't trigger an auto-reset because the plants are still alive. Reset by hand when it happens.
+
+### Labelling extinctions
+`test/experiments/analyze_extinctions.py` reads a results folder (from either script above, or the CSVs downloaded from the Statistics tab) and labels every animal species extinction. It only reads the CSVs; it isn't part of `npm test`. Set it up once with `python -m venv .venv` and `.venv/Scripts/pip install -r test/experiments/requirements.txt`, then run `.venv/Scripts/python test/experiments/analyze_extinctions.py <folder> [--plots]`.
+
+- **Species:** the engine starts a new species on every body mutation. The script groups these so that a species is at least 3 cells different from the one it came from: each engine species joins its parent's species unless it is 3 or more cells away from that species' founding body. Bodies are compared by their cell counts per type (the only body information in the lineage tree), so a cell that only moved isn't counted. Plants and animals never share a species.
+- **Labels:**
+  - `mis_adaptation`: the species had at least 25% of all animals at its peak, then the plants were grazed down to 10% or less of their level while it rose, with food falling too.
+  - `replaced_by_descendant`: a descendant species was still alive and growing when it died out.
+  - `failure_to_adapt`: it wasn't a dominant species (this includes dying in a plant crash another species caused), or the plants were still healthy.
+  - `ambiguous`: it was dominant, but the plants fell only part of the way, or they crashed under piled-up food (see below).
+  - `never_established`: it never reached 10 animals at once. Most extinctions are these.
+- **Smothered plants:** with food blocking reproduction, plants can die out without being eaten, because food covers the map and they can't reproduce. Then food goes up as the plants go down. Overgrazing makes food go down with the plants, so a crash only counts as `mis_adaptation` if food fell.
+
+It writes `species.csv`, `extinctions.csv` (one row per extinction, with the numbers behind each label) and `summary.csv` (label counts per condition) to `<folder>/analysis/`, and with `--plots` a chart per run. The thresholds are constants at the top of the script. They were checked against a 14-world batch; check them against the plots of your own runs before relying on the counts.
 
 ### Files changed
 - `src/Environments/SeedBank.js` (new): dropping, scattering, sprouting and rotting seeds, storm destruction, the counters, and saving and loading.
