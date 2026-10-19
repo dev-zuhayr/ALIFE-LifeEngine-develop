@@ -9,13 +9,12 @@ const BodyCell = require("./BodyCell");
 // hold back from breeding. The gauge looks at the tiles around it and, if
 // there isn't much food, it makes having a child cost extra food.
 //
-// The gauge never kills anything and never stops an organism from breeding
+// The gauge cell never kills anything and never stops an organism from breeding
 // outright, it only makes children more expensive. Gauge cells only show up
 // through normal random mutation, and every new gauge rolls its own
 // sensitivity (which its descendants inherit), so it's up to natural selection
 // whether being cautious actually helps or hurts a lineage.
 
-// ---- Settings you can play with for experiments ----
 const GAUGE_RANGE = 5;            // how far it looks: 5 gives an 11x11 square around the cell
 const MIN_SENSITIVITY = 0.02;     // lowest "food is scarce" threshold (2% of nearby tiles are food)
 const MAX_SENSITIVITY = 0.20;     // highest threshold (20% of nearby tiles are food)
@@ -72,7 +71,7 @@ class GaugeCell extends BodyCell {
             org.gauge_penalty = penalty;
     }
 
-    // What fraction of the tiles around this cell are food (0 to 1)?
+    // Looks at what fraction of the tiles around this cell are food (0 to 1)
     measureFoodDensity() {
         var grid_map = this.org.env.grid_map;
         var center_c = this.getRealCol();
