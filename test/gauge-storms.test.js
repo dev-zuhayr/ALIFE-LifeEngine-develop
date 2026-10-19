@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const h = require('./helpers/headless');
 const {Hyperparams, FossilRecord, Organism, BodyCellFactory, CellStates} = h;
+const RandomOrganismGenerator = require('../src/Organism/RandomOrganismGenerator');
 
 const gaugesOf = org => org.anatomy.cells.filter(c => c.state === CellStates.gauge);
 
@@ -25,6 +26,15 @@ test.describe('gauge cells', () => {
         h.setup({}, 8000);
         const with_gauge = Object.values(FossilRecord.lineage_tree).filter(l => l.cell_counts && l.cell_counts.gauge > 0);
         assert.ok(with_gauge.length > 0, 'no species with a gauge cell in 8000 ticks');
+    });
+
+    test('with gauge mutation off, no gauge cells appear through mutation or in random organisms', () => {
+        FossilRecord.clear_record(); // setup() keeps the lineage tree, which has the previous test's gauge species
+        const env = h.setup({gaugeCanMutate: false}, 8000);
+        const with_gauge = Object.values(FossilRecord.lineage_tree).filter(l => l.cell_counts && l.cell_counts.gauge > 0);
+        assert.equal(with_gauge.length, 0);
+        for (let i = 0; i < 200; i++)
+            assert.equal(gaugesOf(RandomOrganismGenerator.generate(env)).length, 0);
     });
 
     test('with no food around, a gauge doubles the cost of a child', () => {

@@ -25,6 +25,7 @@ const Hyperparams = {
         this.dontKillSameSpecies = false;
 
         this.wingsCanMutate = true;
+        this.gaugeCanMutate = true; // off keeps gauge cells out of mutation and random organisms (see GaugeCell.js)
         this.islandsEnabled = true; // water and islands are generated when a world starts or resets
 
         this.lookRange = 30;

@@ -56,7 +56,8 @@ class RandomOrganismGenerator {
         var neighbors = organism.anatomy.getNeighborsOfCell(x, y);
         if (neighbors.length && Math.random() < spawnChance) {
             let state = CellStates.getRandomLivingType();
-            while (state == CellStates.wings && !Hyperparams.wingsCanMutate)
+            while ((state == CellStates.wings && !Hyperparams.wingsCanMutate) ||
+                   (state == CellStates.gauge && !Hyperparams.gaugeCanMutate))
                 state = CellStates.getRandomLivingType();
             organism.anatomy.addRandomizedCell(state, x, y);
             return true;

@@ -31,6 +31,7 @@ To load custom creations (found in `/dist/assets`), you must have a simple web s
 - Dev mode (better error messages): `npm run build-dev` 
 - Local web server, an alternative to the python one above: `npm start`, then open `http://localhost:8000/`
 - Tests (runs the simulation headless in Node): `npm test`
+- Seeds and lineage tracking with every other project feature off, written to CSV files: `npm run experiment:lineage` (see [Testing seeds on their own](#testing-seeds-on-their-own))
 
 
 # How the Simulation Works
@@ -100,6 +101,8 @@ In our trials, our dominant animal species ate out every plant species and then 
 The gauge cell never kills an organism and never blocks reproduction completely. It only changes the food cost of a child, based on what it measures in the world at that moment. It also gives its own organism no direct advantage, so any survival or extinction outcome is emergent.
 
 ### Settings
+**Gauge cells can mutate** (Evolution Controls tab, default on): when off, mutation and random organisms never create gauge cells. Gauges that already exist are kept. It's saved and loaded with worlds and controls files.
+
 The constants at the top of `src/Organism/Cell/BodyCells/GaugeCell.js` can be changed for experiments:
 
 | Constant | Default | Meaning |
@@ -120,6 +123,7 @@ The constants at the top of `src/Organism/Cell/BodyCells/GaugeCell.js` can be ch
 - `src/Organism/Cell/CellStates.js` also draws the black dot in the middle of the gauge cell, so it can't be mistaken for the mouth.
 - `dist/css/style.css`: draws the same dot on the gauge swatches in the editor and the cell legend.
 - `src/Controllers/EditorController.js` and `dist/index.html`: add the gauge cell to the organism editor and the cell legend.
+- `src/Hyperparameters.js`, `src/Organism/Organism.js`, `src/Organism/RandomOrganismGenerator.js`, `src/Controllers/ControlPanel.js` and `dist/index.html`: the **Gauge cells can mutate** setting.
 
 ## Storms (implemented by Zuhayr Khot)
 ### Purpose
@@ -205,6 +209,15 @@ The **Statistics** tab shows how many seeds are dormant, and how many have been 
 
 ### No hard-coded outcomes
 Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on and auto-reset off, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted.
+
+### Testing seeds on their own
+`npm run experiment:lineage` runs worlds headless with seeds and the lineage tracker as the only project features: storms, islands, wings, gauge cells, food decay and seasonal booms are all off. It runs each world twice, once with seed chance 0 (the baseline) and once with seeds, and writes `runs.csv` (one row per world: condition, how it ended, final counts), `lineages.csv`, `lineages_tree.csv` and `settings.json` to `test/experiments/output/<date and time>/`. The `run_id` column links the three CSVs.
+
+Options: `--worlds` (per condition, default 8), `--ticks` (per world, default 10000; a world that dies out ends early), `--seed` (default 1; the same seed gives the same results), `--controls <file>` (a controls file saved from the Evolution Controls tab, used instead of the defaults, with the other features still off) and `--out <folder>`. For example: `npm run experiment:lineage -- --worlds 20 --ticks 20000 --controls controls.json`.
+
+To do the same in the browser: turn off storms, seasonal booms, wings and gauge mutation, set food lifetime to 0, turn off islands, then **reset** (islands only change on reset). Use seed chance 0 for the baseline.
+
+Even with every project feature off, now and then the plants cover the map with food before animals evolve. Food blocks movement as well as births, so any animals that appear are stuck. This happens in the original engine too (1 of 16 headless worlds with seeds off), and it doesn't trigger an auto-reset because the plants are still alive. Reset by hand when it happens.
 
 ### Files changed
 - `src/Environments/SeedBank.js` (new): dropping, scattering, sprouting and rotting seeds, storm destruction, the counters, and saving and loading.
