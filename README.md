@@ -177,7 +177,7 @@ When the plant population crashes, food stops being produced and everything that
 - **Rotting:** a seed that still hasn't sprouted **Seed rots after** ticks after falling (default **5000**) is gone.
 - **What sprouts:** an exact copy of the parent (no mutation) that joins the parent's species. If that species had died out in the meantime, it comes back: it's listed as extant again, keeps its lineage IDs, and its `revivals` count goes up by one.
 - **Storms** destroy every seed inside their circle, including seeds that the plants they just killed dropped inside it.
-- **Extinction and auto-reset:** while seeds are still dormant, life can come back, so the world is only auto-reset (or auto-paused) once there are no organisms **and** no seeds left.
+- **Extinction and auto-reset:** dormant seeds don't keep a world going. As soon as no living organisms are left, the world auto-resets (or auto-pauses) as usual, and a reset clears the seeds too. To watch seeds bring back a world after a total die-off, turn auto-reset off.
 
 ### Settings
 All of these are in the **Evolution Controls** tab under **Seeds**. They're saved and loaded with worlds and controls files, and "Reset all controls" puts them back to the defaults.
@@ -204,13 +204,13 @@ The **Statistics** tab shows how many seeds are dormant, and how many have been 
 - **World saves** include the dormant seeds, together with the species of seeds whose species has died out, so they can still bring it back after loading. Older saves without seeds still load.
 
 ### No hard-coded outcomes
-Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted.
+Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on and auto-reset off, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted.
 
 ### Files changed
 - `src/Environments/SeedBank.js` (new): dropping, scattering, sprouting and rotting seeds, storm destruction, the counters, and saving and loading.
 - `src/Hyperparameters.js`: adds `seedsEnabled`, `seedChance`, `seedDelayMin`, `seedDelayMax`, `seedMaxDormancy` and `seedScatterRadius`.
 - `src/Organism/Organism.js`: `die(leave_seed = true)` asks the seed bank for a seed before the body turns to food.
-- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, saves and loads it, and only auto-resets once no organisms and no seeds are left.
+- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, and saves and loads it.
 - `src/Controllers/EnvironmentController.js`: deaths caused by hand leave no seeds.
 - `src/Environments/StormSystem.js`: storms destroy seeds in their circle and log `seeds_destroyed`.
 - `src/Stats/FossilRecord.js` and `src/Stats/Species.js`: species brought back from seed are extant again, with `end_tick` -1 and a `revivals` count.

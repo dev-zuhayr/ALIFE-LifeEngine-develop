@@ -12,6 +12,7 @@ for (const radius of [0, 1, 3, 5]) {
     const first_sprouts = [];
     for (let k = 0; k < RUNS; k++) {
         const env = h.setup({seedChance: 0, seedScatterRadius: radius}, 4000);
+        h.WorldConfig.auto_reset = false; // an empty world would otherwise reset straight away and clear the seeds
         Hyperparams.seedChance = 100;
         h.killAll(env);
         Hyperparams.seedChance = 10;

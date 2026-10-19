@@ -135,9 +135,10 @@ test.describe('sprouting', () => {
         assert.equal(env.seeds.sprout(seed), true);
     });
 
-    test('after a total die-off (scatter 3, food blocks on), seeds sprout in every world', () => {
+    test('after a total die-off with auto-reset off (scatter 3, food blocks on), seeds sprout in every world', () => {
         for (let k = 0; k < 5; k++) {
             const env = h.setup({seedChance: 0}, 4000);
+            WorldConfig.auto_reset = false; // otherwise the empty world resets and the seeds go with it
             Hyperparams.seedChance = 100; // every plant in the die-off leaves a seed
             h.killAll(env);
             Hyperparams.seedChance = 10;
@@ -153,6 +154,7 @@ test.describe('sprouting', () => {
 
     test('species brought back by a seed keep their lineage ids, are extant again and are counted as revivals', () => {
         const env = h.setup({seedChance: 100, seedDelayMin: 50, seedDelayMax: 100});
+        WorldConfig.auto_reset = false; // keep the empty world so the seeds can bring it back
         env.seeds.clear();
         const lineage_before = new Map(env.organisms.map(o => [o.species, o.species.lineage_id]));
         h.killAll(env);
@@ -186,27 +188,14 @@ test.describe('storms', () => {
 });
 
 test.describe('extinction and auto-reset', () => {
-    test('with only seeds left, the world resets when the last one rots, and only once', () => {
-        const env = h.setup({seedChance: 100, seedDelayMin: 5000, seedDelayMax: 5000, seedMaxDormancy: 300});
-        h.killAll(env);
-        const last_rot = Math.max(...env.seeds.seeds.map(s => s.rot_tick));
-        let reset_at = -1;
-        for (let i = 0; i < 1000 && reset_at < 0; i++) {
-            const tick = env.total_ticks;
-            env.update();
-            if (env.reset_count > 0) reset_at = tick;
-        }
-        assert.equal(reset_at, last_rot);
-        assert.equal(env.reset_count, 1);
-    });
-
-    test('a storm that destroys the last seed of an empty world triggers the reset', () => {
+    test('with dormant seeds left, the world still resets on the next tick, only once, and the seeds are cleared', () => {
         const env = h.setup({seedChance: 100, seedDelayMin: 5000, seedDelayMax: 5000, seedMaxDormancy: 100000});
         h.killAll(env);
+        assert.ok(env.seeds.count() > 0, 'test setup left no seeds');
         env.update();
-        assert.equal(env.reset_count, 0);
-        Object.assign(Hyperparams, {stormsEnabled: true, stormChance: 100, stormRadius: 500}); // bigger than the map
-        env.update();
+        assert.equal(env.reset_count, 1);
+        assert.equal(env.seeds.count(), 0);
+        h.run(env, 100);
         assert.equal(env.reset_count, 1);
     });
 
@@ -217,12 +206,12 @@ test.describe('extinction and auto-reset', () => {
         assert.equal(env.reset_count, 1);
     });
 
-    test('auto-pause waits for the seeds, then pauses once', () => {
+    test('auto-pause pauses once on the next tick, even with dormant seeds', () => {
         const env = h.setup({seedChance: 100, seedDelayMin: 5000, seedDelayMax: 5000, seedMaxDormancy: 300});
         WorldConfig.auto_pause = true;
         h.killAll(env);
         env.update();
-        assert.equal(h.stubs.pause_clicks, 0);
+        assert.equal(h.stubs.pause_clicks, 1);
         h.run(env, 400);
         assert.equal(h.stubs.pause_clicks, 1);
     });
