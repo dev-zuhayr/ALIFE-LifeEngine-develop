@@ -53,7 +53,7 @@ Organism Cells are only found in organisms, and cannot exist on their own in the
 - Killer - Red, harms organisms in directly adjacent cells (besides itself).
 - Armor - Purple, negates the effects of killer cells.
 - Eye - Light purple with a slit, allows the organism to see and move intelligently. See further description below.
-- Gauge - Gold with a black dot in the middle, senses how much food is nearby and slows its organism's reproduction when food is scarce. *Implemented by Zuhayr Khot.* See [Gauge Cell](#gauge-cell-implemented-by-zuhayr-khot) below.
+- Gauge - Gold with a black dot in the middle, senses how much food is nearby and slows its organism's reproduction when food is scarce. *Implemented by Zuhayr Khot.* See [Gauge Cell](#gauge-cell-and-storms-implemented-by-zuhayr-khot) below.
 
 ## Organisms
 Organisms are structures of cells that eat food, reproduce, and die.
@@ -62,7 +62,7 @@ Their lifespan is calculated by multiplying the number of cells they have by the
 When touched by a killer cell, an organism will take damage. Once it has taken as much damage as it has cells in its body, it will die. If the hyperparameter `One touch kill` is on, an organism will immediatly die when touched by a killer cell.
 
 ## Reproduction
-Once an organism has eaten as much food as it has cells in its body, it will attempt to reproduce. Organisms with a gauge cell may need extra food first if food around them is scarce (see [Gauge Cell](#gauge-cell-implemented-by-zuhayr-khot)). 
+Once an organism has eaten as much food as it has cells in its body, it will attempt to reproduce. Organisms with a gauge cell may need extra food first if food around them is scarce (see [Gauge Cell](#gauge-cell-and-storms-implemented-by-zuhayr-khot)). 
 First, offspring is formed by cloning the current organism and possibly mutating it (see below).
 The offspring birth location is then chosen a certain number of cells in a random direction (up, down, left, right). This number is calculated programmatically such that it is far enough away that it can't intersect with it's parent.
 Additionally, a random value between 1 and 3 is added to the location to introduce a little variance.
@@ -85,24 +85,33 @@ Any organism can evolve eyes, but when an organism has both eyes and mover cells
 # Project Modifications (CSC4044Z Artificial Life, 2026 – Forward Facing Crabs)
 This repository is the LifeEngine `develop` branch with modifications made for the CSC4044Z project *Reproducing Evolutionary Suicide*.
 
-## Gauge Cell (implemented by Zuhayr Khot)
+## Gauge Cell and Storms (implemented by Zuhayr Khot)
 ### Purpose
-In our trials, our dominant animal species ate out every plant species and then starved. The gauge cell tests whether that collapse is genuine evolutionary suicide: it gives an organism a simple way to read its surroundings and hold back from reproducing when food is running out. Gauge cells only appear through random mutation, so whether restraint helps or hurts a lineage is decided by natural selection, not by the code.
+Extinction in the simulation can have two very different causes: organisms driving themselves out of existence (evolutionary suicide), or something in the environment wiping them out. These two modifications test both sides.
+
+The **gauge cell** gives organisms an evolvable way to hold back when food is running low. In early trials the dominant animal species ate out every plant species and then starved, so the gauge tests whether a species can evolve its way out of overconsumption, and whether it keeps that restraint once a cheaper, unrestrained mutant appears.
+
+**Storms** strike random patches of the world regardless of species. They test whether a lineage is resilient or only doing well in one part of the map. Because every storm is logged, extinctions caused by the weather can be told apart from extinctions the organisms caused themselves.
 
 ### How it works
+#### Gauge cell
 - **Sensing:** every tick, each gauge cell counts the food tiles in an 11x11 square around itself (ignoring its own organism's body) and works out the **food density**, the fraction of those tiles that are food.
 - **Sensitivity:** each gauge cell has its own scarcity threshold, between 2% and 20% food density. A gauge created by mutation gets a random sensitivity, which its descendants inherit unchanged. A gauge placed by hand in the editor uses 8%.
 - **Scarcity:** if density is at or above the threshold, the gauge does nothing. Below it, `scarcity = 1 - density / sensitivity`, which is 0 at the threshold and 1 when there is no food at all.
 - **Restraint:** the gauge adds `ceil(body size x MAX_RESTRAINT x scarcity)` extra food to the cost of producing a child. With the default `MAX_RESTRAINT = 1.0`, a child costs at most twice the normal food. The extra food is used up when the child is born, so restrained organisms produce fewer offspring while food is scarce.
 - **Several gauges:** if an organism has more than one gauge, the highest penalty that tick (the most pessimistic gauge) is used.
 - The penalty is recalculated every tick, so restraint stops as soon as food recovers.
+- Gauge cells appear through random mutation, or when placed by hand in the organism editor.
 
-### No hard-coded outcomes
-The gauge cell never kills an organism and never blocks reproduction completely. It only changes the food cost of a child, based on what it measures in the world at that moment. It also gives its own organism no direct advantage, so any survival or extinction outcome is emergent.
+#### Storms
+- **Chance:** every tick there is a very small chance that a storm strikes (default **0.02%** per tick, about one storm every 5,000 ticks).
+- **Area:** the storm lands on a random tile and affects a circle around it (default **radius 8 cells**).
+- **Effect:** every organism with at least one cell inside the circle dies, and all food inside the circle is destroyed (including the bodies of the organisms it just killed). Walls and water are left alone because they are terrain, not life. An organism that is only partly inside the circle still dies, and the part of its body outside the circle turns into food, as with any death. Dormant plant seeds inside the circle are destroyed too (see [Plant Seeds and Lineage Tracking](#plant-seeds-and-lineage-tracking-implemented-by-dylan)).
+- **Look:** the affected circle flashes light blue for about a second. This is only visual.
+- **Time:** a storm happens in a single tick. It is not an ongoing weather system.
 
 ### Settings
-**Gauge cells can mutate** (Evolution Controls tab, default on): when off, mutation and random organisms never create gauge cells. Gauges that already exist are kept. It's saved and loaded with worlds and controls files.
-
+#### Gauge cell
 The constants at the top of `src/Organism/Cell/BodyCells/GaugeCell.js` can be changed for experiments:
 
 | Constant | Default | Meaning |
@@ -113,37 +122,16 @@ The constants at the top of `src/Organism/Cell/BodyCells/GaugeCell.js` can be ch
 | `DEFAULT_SENSITIVITY` | 0.08 | Threshold for gauges placed in the editor |
 | `MAX_RESTRAINT` | 1.0 | Maximum extra cost of a child, as a multiple of body size |
 
-### Files changed
-- `src/Organism/Cell/BodyCells/GaugeCell.js` (new): the gauge cell's behaviour.
-- `src/Organism/Cell/CellStates.js`: adds the `gauge` cell state and includes it in the lists of all and living cell types, so it can appear through mutation and is counted in the statistics charts.
-- `src/Organism/Cell/BodyCells/BodyCellFactory.js`: registers `GaugeCell`.
-- `src/Organism/Organism.js`: adds `gauge_penalty` and `gauge_tick`, and adds `gauge_penalty` to `foodNeeded()`.
-- `src/Organism/Perception/Brain.js`: when a saved brain is loaded, adds a default ("ignore") decision for any cell type it doesn't know about, so organisms saved before the gauge cell existed can still be loaded.
-- `src/Rendering/ColorScheme.js`: adds a gauge color (gold, with a black dot) to each color scheme. The grayscale scheme stays gray but still gets the dot.
-- `src/Organism/Cell/CellStates.js` also draws the black dot in the middle of the gauge cell, so it can't be mistaken for the mouth.
-- `dist/css/style.css`: draws the same dot on the gauge swatches in the editor and the cell legend.
-- `src/Controllers/EditorController.js` and `dist/index.html`: add the gauge cell to the organism editor and the cell legend.
-- `src/Hyperparameters.js`, `src/Organism/Organism.js`, `src/Organism/RandomOrganismGenerator.js`, `src/Controllers/ControlPanel.js` and `dist/index.html`: the **Gauge cells can mutate** setting.
+#### Storms
+These are in the **Evolution Controls** tab under **Storms**. They're saved and loaded with worlds and controls files, and "Reset all controls" puts them back to the defaults.
 
-## Storms (implemented by Zuhayr Khot)
-### Purpose
-Extinction in the simulation can have two very different causes: the organisms doing it to themselves (evolutionary suicide) or something in the environment simply wiping them out. Storms are an outside disturbance we can switch on or off, so a run with storms can be compared with the same run without them. That helps separate extinctions the organisms caused from extinctions the weather caused.
+| Setting | Default | Meaning |
+|---|---|---|
+| Storms enabled | on | Whether storms can happen. Untick it for a no-storm baseline run. |
+| Storm chance (% per tick) | 0.02 | Chance per tick that a storm strikes. |
+| Storm radius (cells) | 8 | Radius of the circle a storm wipes. On a 160 x 100 map, radius 8 covers about 1% of the map, radius 16 about 5% and radius 40 about 31%. |
 
-### How it works
-- **Chance:** every tick there is a very small chance that a storm strikes (default **0.02%** per tick, about one storm every 5,000 ticks).
-- **Area:** the storm lands on a random tile and affects a circle around it (default **radius 8 cells**).
-- **Effect:** every organism with at least one cell inside the circle dies, and all food inside the circle is destroyed (including the bodies of the organisms it just killed). Walls are left alone because they are terrain, not life. An organism that is only partly inside the circle still dies, and the part of its body outside the circle turns into food, as with any death. Dormant plant seeds inside the circle are destroyed too (see [Plant Seeds](#plant-seeds)).
-- **Look:** the affected circle flashes light blue for about a second. This is only visual.
-- **Time:** a storm happens in a single tick. It is not an ongoing weather system.
-
-### Using it in the simulation
-Open the **Evolution Controls** tab and scroll down to **Storms**:
-- **Storms enabled**: turn storms on or off (they are on by default, so untick this for a no-storm baseline run).
-- **Storm chance (% per tick)** and **Storm radius (cells)**.
-- **Trigger storm now**: strikes a random patch immediately, handy for testing.
-- **Download storm log**: saves the storm log as a `.json` file.
-
-The **Statistics** tab shows how many storms there have been this run, the current storm chance and what the last storm did. The three storm settings are saved and loaded with worlds like the other evolution controls, and "Reset all controls" puts them back to the defaults.
+**Trigger storm now** strikes a random patch immediately, which is handy for testing, and **Download storm log** saves the storm log as a `.json` file. The **Statistics** tab shows how many storms there have been this run, the current storm chance and what the last storm did.
 
 ### The storm log
 Every storm adds an entry to a log (kept in memory, and kept when the world auto-resets after total extinction). **It is not part of world save files, so download it before closing the page.** Each entry records:
@@ -159,21 +147,35 @@ Every storm adds an entry to a log (kept in memory, and kept when the world auto
 
 Any extinction listed under `species_extinct` was caused by a storm, so it should not be counted as evolutionary suicide.
 
-### No hard-coded outcomes
-Storms never choose a species and never force an extinction. They hit a random patch and affect whatever is in it, so whether a lineage survives depends on where it lives and how spread out it is. If a storm ever wipes out the whole population, the engine's normal "reset on total extinction" setting takes over, exactly as it would for any other extinction.
+### Additional Info
+- The storm chance is a fixed setting. It doesn't change with the seasonal booms.
+- A gauge cell is also a body cell, so it makes the body one cell bigger. That raises the base food cost of every child, even when food is plentiful.
+- A gauge works the same way on any organism that carries one, including plants.
+- Gauge cells count water tiles when they sense, so near a coast they read a lower food density (see [Islands and Wings](#islands-and-wings-implemented-by-miguel-lavarinhas)).
 
 ### Files changed
+- `src/Organism/Cell/BodyCells/GaugeCell.js` (new): the gauge cell's behaviour.
+- `src/Organism/Cell/CellStates.js`: adds the `gauge` cell state, includes it in the lists of all and living cell types (so it can appear through mutation and is counted in the statistics charts), and draws a black dot in the middle of the gauge cell so it can't be mistaken for the mouth.
+- `src/Organism/Cell/BodyCells/BodyCellFactory.js`: registers `GaugeCell`.
+- `src/Organism/Organism.js`: adds `gauge_penalty` and `gauge_tick`, and adds `gauge_penalty` to `foodNeeded()`.
+- `src/Organism/Perception/Brain.js`: when a saved brain is loaded, adds a default ("ignore") decision for any cell type it doesn't know about, so organisms saved before the gauge cell existed can still be loaded.
+- `src/Rendering/ColorScheme.js`: adds a gauge color (gold, with a black dot) to each color scheme. The grayscale scheme stays gray but still gets the dot.
+- `dist/css/style.css`: draws the same dot on the gauge swatches in the editor and the cell legend.
+- `src/Controllers/EditorController.js` and `dist/index.html`: add the gauge cell to the organism editor and the cell legend.
 - `src/Environments/StormSystem.js` (new): all of the storm logic and the log.
 - `src/Environments/WorldEnvironment.js`: creates the storm system, rolls for a storm at the start of each tick, and draws the flash after the normal drawing.
 - `src/Hyperparameters.js`: adds `stormsEnabled`, `stormChance` and `stormRadius`.
 - `src/Controllers/ControlPanel.js` and `dist/index.html`: add the Storms controls to the Evolution Controls tab and wire them up.
 - `src/Stats/StatsPanel.js` and `dist/index.html`: add the storm line to the Statistics tab.
 
-## Plant Seeds
+## Plant Seeds and Lineage Tracking (implemented by Dylan)
 ### Purpose
-When the plant population crashes, food stops being produced and everything that depends on it starves. Seeds give plants a way to come back: a dying plant can leave a seed that sprouts after a random delay. This lets us test whether food can recover after a crash, and whether a lineage that looks extinct is really gone or only waiting in the soil.
+When the plant population crashes, food stops being produced and everything that depends on it starves. Seeds give plants a way to come back: a dying plant can leave a seed that sprouts after a random delay. This tests whether food can recover after a crash, and whether a lineage that looks extinct is really gone or only waiting in the soil.
+
+Lineage tracking records what happens over the course of a run, so booms, crashes, recoveries and extinctions can be analysed afterwards: which lineages existed, how many individuals each had, which cell types they carried, and how much food and how many seeds there were.
 
 ### How it works
+#### Plant seeds
 - **Who leaves seeds:** a plant is any organism with producer cells and no mover cells. When a plant dies of old age, killer cells or a storm, it leaves a seed with probability **Seed chance** (default **10%**). Organisms removed by hand (the kill tool, or drawing walls over them) never leave seeds.
 - **Where it falls:** on a random tile within **Seed scatter radius** cells of the plant's center (default **3**). Seeds are not drawn on the grid and nothing can eat them.
 - **When it sprouts:** after a random delay between **Sprout delay min** and **max** (default **200** to **2000** ticks).
@@ -181,9 +183,17 @@ When the plant population crashes, food stops being produced and everything that
 - **Rotting:** a seed that still hasn't sprouted **Seed rots after** ticks after falling (default **5000**) is gone.
 - **What sprouts:** an exact copy of the parent (no mutation) that joins the parent's species. If that species had died out in the meantime, it comes back: it's listed as extant again, keeps its lineage IDs, and its `revivals` count goes up by one.
 - **Storms** destroy every seed inside their circle, including seeds that the plants they just killed dropped inside it.
-- **Extinction and auto-reset:** dormant seeds don't keep a world going. As soon as no living organisms are left, the world auto-resets (or auto-pauses) as usual, and a reset clears the seeds too. To watch seeds bring back a world after a total die-off, turn auto-reset off.
+- **Extinction and auto-reset:** while seeds are still dormant, life can come back, so the world is only auto-reset (or auto-paused) once there are no organisms **and** no seeds left.
+
+#### Lineage tracking
+- **Lineage IDs:** every species gets a lineage ID when it is created, together with its parent's lineage ID and a founder ID. The founder is the lineage at the root of the family tree, so a species with no ancestor is its own founder. An organism placed from the editor joins the species already in the world if one has the same name, and otherwise starts a new root lineage.
+- **Samples:** every 100 ticks, one row is logged for each living lineage. It holds the lineage's population and the number of cells of each type its members have, plus world-wide values: total population, number of lineages, food on the grid by source, plant food produced since the last sample, average mutability and the seed numbers.
+- **End rows:** just before a reset, a row with the event `end` is logged, so the state a run ended in is kept. When nothing is alive, a single row with lineage ID -1 and population 0 is logged, so extinction shows up in the data.
+- **Runs:** rows are kept across resets and world loads. `run_id` goes up on every reset or load.
+- **Lineage tree:** one row per lineage ever created in each run, with its parent, founder, start tick, end tick (-1 while it is still alive), cell counts and revivals.
 
 ### Settings
+#### Plant seeds
 All of these are in the **Evolution Controls** tab under **Seeds**. They're saved and loaded with worlds and controls files, and "Reset all controls" puts them back to the defaults.
 
 | Setting | Default | Meaning |
@@ -196,19 +206,46 @@ All of these are in the **Evolution Controls** tab under **Seeds**. They're save
 
 The **Statistics** tab shows how many seeds are dormant, and how many have been dropped, sprouted, rotted and destroyed by storms this run.
 
-### The data
-- **Lineage CSV** (`lineages.csv`): six new columns at the end of each row:
-  - `seed_chance`: the chance in effect, or 0 when seeds are off.
-  - `seeds_dormant`: seeds waiting right now.
-  - `seeds_dropped`, `seeds_sprouted`, `seeds_rotted`, `seeds_destroyed`: counts since the previous sample.
+#### Lineage tracking
+Lineage tracking is always on. Its buttons are in the **World Controls** tab, next to Save World and Load World:
+- **Download Lineage CSV** saves two files, `lineages.csv` (the samples) and `lineages_tree.csv` (the lineage tree).
+- **Save As** changes the base name of those files.
+- **Clear lineage log** deletes all logged rows after asking for confirmation. Logging continues from the current tick.
 
-  A row with `population` 0 and `seeds_dormant` above 0 means nothing is alive but the world hasn't ended yet.
-- **Lineage tree CSV** (`lineages_tree.csv`): a new `revivals` column at the end, showing how many times each lineage came back from seed after going extinct.
+The lineage log is kept in memory and is not part of world saves, so download it before closing the page.
+
+### The data
+**`lineages.csv`**: one row per living lineage per sample.
+
+| Column(s) | Meaning |
+|---|---|
+| `run_id`, `tick`, `event` | Which run, when, and whether the row is a `sample` or an `end` row |
+| `lineage_id`, `parent_lineage_id`, `founder_id` | The lineage, its parent and the root of its family tree (-1 when there is none) |
+| `population` | Living individuals of the lineage |
+| `mouth`, `producer`, `mover`, `killer`, `armor`, `eye`, `gauge`, `wings` | Total cells of each type across the lineage's living individuals |
+| `total_pop`, `num_lineages` | Living organisms and lineages in the whole world |
+| `total_food`, `plant_food`, `corpse_food`, `other_food` | Food tiles on the grid, by source |
+| `plant_food_produced` | Food made by producer cells since the previous sample |
+| `avg_mutability` | Average mutability of the living organisms |
+| `seed_chance` | The seed chance in effect, or 0 when seeds are off |
+| `seeds_dormant` | Seeds waiting right now |
+| `seeds_dropped`, `seeds_sprouted`, `seeds_rotted`, `seeds_destroyed` | Counts since the previous sample |
+
+The world-wide columns repeat on every lineage row of the same sample. A row with `population` 0 and `seeds_dormant` above 0 means nothing is alive but the world hasn't ended yet.
+
+**`lineages_tree.csv`**: one row per lineage per run, with the columns `run_id`, `lineage_id`, `parent_lineage_id`, `founder_id`, `start_tick`, `end_tick`, one column per cell type, and `revivals` (how many times the lineage came back from seed after going extinct).
+
+Other places the data shows up:
 - **Storm log:** each storm records `seeds_destroyed`.
 - **World saves** include the dormant seeds, together with the species of seeds whose species has died out, so they can still bring it back after loading. Older saves without seeds still load.
 
 ### No hard-coded outcomes
-Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on and auto-reset off, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted.
+Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on and auto-reset off, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted. Lineage tracking only records what happens and never changes the simulation.
+
+### Known quirks
+- An organism with both producer and mover cells counts as an animal, not a plant, so it never leaves seeds.
+- A seed that lands on water can never sprout, and rots (see [Islands and Wings](#islands-and-wings-implemented-by-miguel-lavarinhas)).
+- Lineage logging keeps every row in memory, so very long runs can produce large CSV files.
 
 ### Testing seeds on their own
 `npm run experiment:lineage` runs worlds headless with seeds and the lineage tracker as the only project features: storms, islands, wings, gauge cells, food decay and seasonal booms are all off. It runs each world twice, once with seed chance 0 (the baseline) and once with seeds, and writes `runs.csv` (one row per world: condition, how it ended, final counts), `lineages.csv`, `lineages_tree.csv` and `settings.json` to `test/experiments/output/<date and time>/`. The `run_id` column links the three CSVs.
@@ -239,14 +276,14 @@ It writes `species.csv`, `extinctions.csv` (one row per extinction, with the num
 
 ### Files changed
 - `src/Environments/SeedBank.js` (new): dropping, scattering, sprouting and rotting seeds, storm destruction, the counters, and saving and loading.
+- `src/Stats/LineageTracker.js` (new): the sample log, the lineage tree and the CSV downloads.
 - `src/Hyperparameters.js`: adds `seedsEnabled`, `seedChance`, `seedDelayMin`, `seedDelayMax`, `seedMaxDormancy` and `seedScatterRadius`.
 - `src/Organism/Organism.js`: `die(leave_seed = true)` asks the seed bank for a seed before the body turns to food.
-- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, and saves and loads it.
-- `src/Controllers/EnvironmentController.js`: deaths caused by hand leave no seeds.
+- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, saves and loads it, only auto-resets once no organisms and no seeds are left, and records a lineage sample every 100 ticks.
+- `src/Controllers/EnvironmentController.js`: deaths caused by hand leave no seeds, and organisms placed from the editor join or start a lineage.
 - `src/Environments/StormSystem.js`: storms destroy seeds in their circle and log `seeds_destroyed`.
-- `src/Stats/FossilRecord.js` and `src/Stats/Species.js`: species brought back from seed are extant again, with `end_tick` -1 and a `revivals` count.
-- `src/Stats/LineageTracker.js`: the seed columns and the `revivals` column.
-- `src/Controllers/ControlPanel.js`, `src/Stats/StatsPanel.js` and `dist/index.html`: the Seeds controls and the Statistics line.
+- `src/Stats/FossilRecord.js` and `src/Stats/Species.js`: lineage IDs, the lineage tree, and species brought back from seed being extant again with `end_tick` -1 and a `revivals` count.
+- `src/Controllers/ControlPanel.js`, `src/Stats/StatsPanel.js` and `dist/index.html`: the Seeds controls, the lineage buttons and the Statistics line.
 
 ## Food Decay and Seasons (implemented by Lawton Springbok)
 ### Purpose

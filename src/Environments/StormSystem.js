@@ -5,12 +5,12 @@ const Hyperparams = require('../Hyperparameters');
 // Implemented by Zuhayr Khot
 //
 // Every tick there's a tiny chance that a storm hits a random circular patch
-// of the map. The storm doesn't care what's there:
-//   - every organism with even one cell inside the patch dies
-//   - all the food inside the patch is destroyed (including the corpses of
-//     the organisms it just killed, so nothing is left lying around)
-//   - walls stay, because they're terrain and not living stuff
-//   - dormant plant seeds inside the patch are destroyed too (see SeedBank.js)
+// of the map. The storm doesn't care what's there, so every organism with even one cell 
+// inside the patch dies, all the food inside the patch is destroyed (including the corpses of
+// the organisms it just killed, so nothing is left lying around)
+// and walls stay, because they're terrain and not living stuff
+//
+// *UPDATE*, the dormant plant seeds inside the patch are destroyed too (see SeedBank.js)
 //
 // It never picks a species and never forces an extinction. Whether a lineage
 // makes it depends on where it happens to be and how spread out it is. A
@@ -45,8 +45,6 @@ class StormSystem {
         return Math.min(100, Math.max(0, Hyperparams.stormChance));
     }
 
-    // ---- The storm itself ----
-
     // col/row/radius are optional. If you leave them out the storm lands on a random tile.
     triggerStorm(col = null, row = null, radius = null, source = 'natural') {
         let env = this.env;
@@ -59,7 +57,7 @@ class StormSystem {
             radius = Hyperparams.stormRadius;
         radius = Math.max(0, Math.floor(radius));
 
-        // 1. Work out what's inside the circle
+        // first it works out what's inside the circle
         let area = [];
         let victims = new Set();
         let food_destroyed = 0;
@@ -78,26 +76,26 @@ class StormSystem {
             }
         }
 
-        // 2. Kill every organism that got touched
+        // kill every organism that got touched
         let species_hit = new Set();
         let organisms_killed = 0;
         for (let org of victims) {
             if (!org.living)
                 continue;
             species_hit.add(org.species);
-            org.die(); // a normal death: the body turns to food and the species population drops
+            org.die(); // a normal death, so the body turns to food and the species population drops
             organisms_killed++;
         }
 
-        // 3. Clean out the whole patch (old food plus the corpses we just made)
+        // then we clean out the whole patch (old food plus the corpses we just made)
         for (let cell of area) {
             if (cell.state !== CellStates.empty)
                 env.changeCell(cell.col, cell.row, CellStates.empty, null);
         }
-        // ...and the seeds lying in it, including any the dead plants just dropped inside the circle
+        // *UPDATE* now also the seeds lying in it
         let seeds_destroyed = env.seeds.destroyInArea(col, row, radius);
 
-        // 4. Write down what happened
+        // keep record and write down what happened
         let species_extinct = [];
         for (let s of species_hit) {
             if (s.extinct)
@@ -127,15 +125,13 @@ class StormSystem {
         };
         this.log.push(event);
 
-        // 5. Flash the patch on screen (looks only, doesn't affect the simulation)
+        // flash the patch on screen (looks only, doesn't affect the simulation)
         this.flashes.push({col: col, row: row, radius: radius, until: Date.now() + FLASH_MS});
 
         return event;
     }
 
-    // ---- Drawing ----
-
-    // Called from WorldEnvironment.render() after the normal cells are drawn
+    // called from WorldEnvironment.render() after the normal cells are drawn
     render() {
         if (this.flashes.length === 0)
             return;
@@ -165,8 +161,6 @@ class StormSystem {
         }
         this.flashes = still_active;
     }
-
-    // ---- Log helpers ----
 
     // How many storms have hit since the last reset
     stormsInCurrentRun() {
