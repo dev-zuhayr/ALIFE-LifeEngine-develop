@@ -45,7 +45,6 @@ class WorldEnvironment extends Environment{
     }
 
     update() {
-        let had_seeds = this.seeds.count() > 0;
         this.storms.update(); // roll for a storm before anything else moves this tick
         var to_remove = [];
         for (var i in this.organisms) {
@@ -56,9 +55,6 @@ class WorldEnvironment extends Environment{
         }
         this.removeOrganisms(to_remove);
         this.seeds.update(); // sprout or rot dormant seeds; sprouts start acting next tick
-        // nothing alive and the last dormant seed just went, so life is really over
-        if (had_seeds && this.organisms.length === 0 && this.seeds.count() === 0)
-            this.handleExtinction();
         if (Hyperparams.seasonsEnabled) {
             this.updateSeason();
         }
@@ -95,12 +91,12 @@ class WorldEnvironment extends Environment{
             this.total_mutability -= this.organisms[i].mutability;
             this.organisms.splice(i, 1);
         }
-        // with seeds still dormant life can come back, so wait for them to sprout or rot (see update())
-        if (this.organisms.length === 0 && start_pop > 0 && this.seeds.count() === 0)
+        // dormant seeds don't count: with auto-reset on, the reset clears them too
+        if (this.organisms.length === 0 && start_pop > 0)
             this.handleExtinction();
     }
 
-    // total extinction: no organisms and no dormant seeds
+    // total extinction: no living organisms left
     handleExtinction() {
         if (WorldConfig.auto_pause)
             $('.pause-button')[0].click();

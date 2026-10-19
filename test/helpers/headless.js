@@ -11,7 +11,6 @@
 // The modules are singletons (Hyperparams, FossilRecord, LineageTracker), so
 // makeEnv()/setup() reset them for each new world. Each test file runs in its own
 // process, so tests in different files can't affect each other.
-
 const stubs = {pause_clicks: 0};
 global.$ = () => ({click() {}, is() { return false; }, 0: {click() { stubs.pause_clicks++; }}});
 global.document = {};

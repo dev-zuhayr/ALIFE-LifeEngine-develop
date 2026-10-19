@@ -490,6 +490,9 @@ class ControlPanel {
         $('#wings-can-mutate').change(function() {
             Hyperparams.wingsCanMutate = this.checked;
         });
+        $('#gauge-can-mutate').change(function() {
+            Hyperparams.gaugeCanMutate = this.checked;
+        });
         $('#islands-enabled').change(function() {
             Hyperparams.islandsEnabled = this.checked;
         });
@@ -544,6 +547,7 @@ class ControlPanel {
         $('#food-blocks').prop('checked', Hyperparams.foodBlocksReproduction);
         $('#dont-kill-same-species').prop('checked', Hyperparams.dontKillSameSpecies);
         $('#wings-can-mutate').prop('checked', Hyperparams.wingsCanMutate);
+        $('#gauge-can-mutate').prop('checked', Hyperparams.gaugeCanMutate);
         $('#islands-enabled').prop('checked', Hyperparams.islandsEnabled);
         $('#food-drop-rate').val(Hyperparams.foodDropProb);
         $('#food-lifetime').val(Hyperparams.foodLifetime);

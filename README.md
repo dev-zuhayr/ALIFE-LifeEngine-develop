@@ -31,6 +31,7 @@ To load custom creations (found in `/dist/assets`), you must have a simple web s
 - Dev mode (better error messages): `npm run build-dev` 
 - Local web server, an alternative to the python one above: `npm start`, then open `http://localhost:8000/`
 - Tests (runs the simulation headless in Node): `npm test`
+- Seeds and lineage tracking with every other project feature off, written to CSV files: `npm run experiment:lineage` (see [Testing seeds on their own](#testing-seeds-on-their-own))
 
 
 # How the Simulation Works
@@ -100,7 +101,7 @@ The **gauge cell** gives organisms an evolvable way to hold back when food is ru
 - **Restraint:** the gauge adds `ceil(body size x MAX_RESTRAINT x scarcity)` extra food to the cost of producing a child. With the default `MAX_RESTRAINT = 1.0`, a child costs at most twice the normal food. The extra food is used up when the child is born, so restrained organisms produce fewer offspring while food is scarce.
 - **Several gauges:** if an organism has more than one gauge, the highest penalty that tick (the most pessimistic gauge) is used.
 - The penalty is recalculated every tick, so restraint stops as soon as food recovers.
-- Gauge cells appear through random mutation, or when placed by hand in the organism editor.
+- Gauge cells appear through random mutation (unless **Gauge cells can mutate** is off, see [Settings](#settings)), or when placed by hand in the organism editor.
 
 #### Storms
 - **Chance:** every tick there is a very small chance that a storm strikes (default **0.02%** per tick, about one storm every 5,000 ticks).
@@ -111,6 +112,8 @@ The **gauge cell** gives organisms an evolvable way to hold back when food is ru
 
 ### Settings
 #### Gauge cell
+**Gauge cells can mutate** (Evolution Controls tab, default on): when off, mutation and random organisms never create gauge cells. Gauges that already exist are kept. It's saved and loaded with worlds and controls files, and "Reset all controls" turns it back on.
+
 The constants at the top of `src/Organism/Cell/BodyCells/GaugeCell.js` can be changed for experiments:
 
 | Constant | Default | Meaning |
@@ -161,6 +164,7 @@ Any extinction listed under `species_extinct` was caused by a storm, so it shoul
 - `src/Rendering/ColorScheme.js`: adds a gauge color (gold, with a black dot) to each color scheme. The grayscale scheme stays gray but still gets the dot.
 - `dist/css/style.css`: draws the same dot on the gauge swatches in the editor and the cell legend.
 - `src/Controllers/EditorController.js` and `dist/index.html`: add the gauge cell to the organism editor and the cell legend.
+- `src/Hyperparameters.js`, `src/Organism/Organism.js`, `src/Organism/RandomOrganismGenerator.js`, `src/Controllers/ControlPanel.js` and `dist/index.html`: the **Gauge cells can mutate** setting.
 - `src/Environments/StormSystem.js` (new): all of the storm logic and the log.
 - `src/Environments/WorldEnvironment.js`: creates the storm system, rolls for a storm at the start of each tick, and draws the flash after the normal drawing.
 - `src/Hyperparameters.js`: adds `stormsEnabled`, `stormChance` and `stormRadius`.
@@ -182,7 +186,7 @@ Lineage tracking records what happens over the course of a run, so booms, crashe
 - **Rotting:** a seed that still hasn't sprouted **Seed rots after** ticks after falling (default **5000**) is gone.
 - **What sprouts:** an exact copy of the parent (no mutation) that joins the parent's species. If that species had died out in the meantime, it comes back: it's listed as extant again, keeps its lineage IDs, and its `revivals` count goes up by one.
 - **Storms** destroy every seed inside their circle, including seeds that the plants they just killed dropped inside it.
-- **Extinction and auto-reset:** while seeds are still dormant, life can come back, so the world is only auto-reset (or auto-paused) once there are no organisms **and** no seeds left.
+- **Extinction and auto-reset:** dormant seeds don't keep a world going. As soon as no living organisms are left, the world auto-resets (or auto-pauses) as usual, and a reset clears the seeds too. To watch seeds bring back a world after a total die-off, turn auto-reset off.
 
 #### Lineage tracking
 - **Lineage IDs:** every species gets a lineage ID when it is created, together with its parent's lineage ID and a founder ID. The founder is the lineage at the root of the family tree, so a species with no ancestor is its own founder. An organism placed from the editor joins the species already in the world if one has the same name, and otherwise starts a new root lineage.
@@ -230,7 +234,7 @@ The lineage log is kept in memory and is not part of world saves, so download it
 | `seeds_dormant` | Seeds waiting right now |
 | `seeds_dropped`, `seeds_sprouted`, `seeds_rotted`, `seeds_destroyed` | Counts since the previous sample |
 
-The world-wide columns repeat on every lineage row of the same sample. A row with `population` 0 and `seeds_dormant` above 0 means nothing is alive but the world hasn't ended yet.
+The world-wide columns repeat on every lineage row of the same sample. A row with `population` 0 means nothing is alive. With auto-reset on, that's the run's `end` row, and `seeds_dormant` can still be above 0 because the seeds are only cleared by the reset that follows. With auto-reset off, the world carries on and those seeds can still sprout.
 
 **`lineages_tree.csv`**: one row per lineage per run, with the columns `run_id`, `lineage_id`, `parent_lineage_id`, `founder_id`, `start_tick`, `end_tick`, one column per cell type, and `revivals` (how many times the lineage came back from seed after going extinct).
 
@@ -239,19 +243,46 @@ Other places the data shows up:
 - **World saves** include the dormant seeds, together with the species of seeds whose species has died out, so they can still bring it back after loading. Older saves without seeds still load.
 
 ### No hard-coded outcomes
-Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted. Lineage tracking only records what happens and never changes the simulation.
+Seeds never guarantee recovery. A seed only sprouts if there's room for it by the normal birth rules, and the sprouts then have to survive and reproduce like any other plant. In headless tests with **Food blocks reproduction** on and auto-reset off, seeds sprouted in every world after killing every organism. With scatter radius 1–5, the plants re-established in 5–6 of 8 worlds and died out again in the rest. With scatter radius 0, no seed ever sprouted. Lineage tracking only records what happens and never changes the simulation.
 
 ### Known quirks
 - An organism with both producer and mover cells counts as an animal, not a plant, so it never leaves seeds.
 - A seed that lands on water can never sprout, and rots (see [Islands and Wings](#islands-and-wings-implemented-by-miguel-lavarinhas)).
 - Lineage logging keeps every row in memory, so very long runs can produce large CSV files.
 
+### Testing seeds on their own
+`npm run experiment:lineage` runs worlds headless with seeds and the lineage tracker as the only project features: storms, islands, wings, gauge cells, food decay and seasonal booms are all off. It runs each world twice, once with seed chance 0 (the baseline) and once with seeds, and writes `runs.csv` (one row per world: condition, how it ended, final counts), `lineages.csv`, `lineages_tree.csv` and `settings.json` to `test/experiments/output/<date and time>/`. The `run_id` column links the three CSVs.
+
+Options: `--worlds` (per condition, default 8), `--ticks` (per world, default 10000; a world that dies out ends early), `--seed` (default 1; the same seed gives the same results), `--controls <file>` (a controls file saved from the Evolution Controls tab, used instead of the defaults, with the other features still off), `--world <file>` (a saved world to start every world from, instead of the single starting plant; its settings are used unless `--controls` is given) and `--out <folder>`. For example: `npm run experiment:lineage -- --worlds 20 --ticks 20000 --controls controls.json`.
+
+`npm run experiment:batch` does the same with several copies running at once (by default one less than the number of CPU cores), then merges their results into one folder with `run_id` renumbered so it's unique. It takes the same options, plus `--jobs`; `--worlds` is the total per condition (default 28). Each job's own output is kept in `jobs/`, and `npm run experiment:batch -- --merge <batch folder>` merges those again without rerunning them.
+
+To do the same in the browser: turn off storms, seasonal booms, wings and gauge mutation, set food lifetime to 0, turn off islands, then **reset** (islands only change on reset). Use seed chance 0 for the baseline. `test/experiments/controls/seeds-only.json` (seed chance 10%, scatter radius 3) and `seeds-only-baseline.json` (seed chance 0) have these settings ready: load one with **Load controls** in the Evolution Controls tab, then reset. They also work with `--controls`.
+
+`test/experiments/worlds/basic-world.json` is a starting world with the same settings: a 308x146 grid (what **Fill Window** gives at cell size 5 on a 1920x1080 screen at 125% scaling) split into eight patches, each with three `6zwopgo1rm` plants, two `yqqohd0nda` plants and two `yihvwmi3yk` animals (the organisms are in `test/experiments/organisms/`). Load it with **Load World** (keep **Override Evolution Controls** ticked so its settings load too), and don't reset afterwards, or you'll be back to a single starting organism. A saved world keeps its own grid size, so to build it for a different window run `npm run make-world -- --cols <columns> --rows <rows>`.
+
+Even with every project feature off, now and then the plants cover the map with food before animals evolve. Food blocks movement as well as births, so any animals that appear are stuck. This happens in the original engine too (1 of 16 headless worlds with seeds off), and it doesn't trigger an auto-reset because the plants are still alive. Reset by hand when it happens.
+
+### Labelling extinctions
+`test/experiments/analyze_extinctions.py` reads a results folder (from either script above, or the CSVs downloaded with **Download Lineage CSV** in the World Controls tab) and labels every animal species extinction. It only reads the CSVs; it isn't part of `npm test`. Set it up once with `python -m venv .venv` and `.venv/Scripts/pip install -r test/experiments/requirements.txt`, then run `.venv/Scripts/python test/experiments/analyze_extinctions.py <folder> [--plots]`.
+
+- **Species:** the engine starts a new species on every body mutation. The script groups these so that a species is at least 3 cells different from the one it came from: each engine species joins its parent's species unless it is 3 or more cells away from that species' founding body. Bodies are compared by their cell counts per type (the only body information in the lineage tree), so a cell that only moved isn't counted. Plants and animals never share a species.
+- **Labels:**
+  - `mis_adaptation`: the species had at least 25% of all animals at its peak, then the plants were grazed down to 10% or less of their level while it rose, with food falling too.
+  - `replaced_by_descendant`: a descendant species was still alive and growing when it died out.
+  - `failure_to_adapt`: it wasn't a dominant species (this includes dying in a plant crash another species caused), or the plants were still healthy.
+  - `ambiguous`: it was dominant, but the plants fell only part of the way, or they crashed under piled-up food (see below).
+  - `never_established`: it never reached 10 animals at once. Most extinctions are these.
+- **Smothered plants:** with food blocking reproduction, plants can die out without being eaten, because food covers the map and they can't reproduce. Then food goes up as the plants go down. Overgrazing makes food go down with the plants, so a crash only counts as `mis_adaptation` if food fell.
+
+It writes `species.csv`, `extinctions.csv` (one row per extinction, with the numbers behind each label) and `summary.csv` (label counts per condition) to `<folder>/analysis/`, and with `--plots` a chart per run. The thresholds are constants at the top of the script. They were checked against a 14-world batch; check them against the plots of your own runs before relying on the counts.
+
 ### Files changed
 - `src/Environments/SeedBank.js` (new): dropping, scattering, sprouting and rotting seeds, storm destruction, the counters, and saving and loading.
 - `src/Stats/LineageTracker.js` (new): the sample log, the lineage tree and the CSV downloads.
 - `src/Hyperparameters.js`: adds `seedsEnabled`, `seedChance`, `seedDelayMin`, `seedDelayMax`, `seedMaxDormancy` and `seedScatterRadius`.
 - `src/Organism/Organism.js`: `die(leave_seed = true)` asks the seed bank for a seed before the body turns to food.
-- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, saves and loads it, only auto-resets once no organisms and no seeds are left, and records a lineage sample every 100 ticks.
+- `src/Environments/WorldEnvironment.js`: creates and updates the seed bank, clears it on reset and on world load, saves and loads it, and records a lineage sample every 100 ticks.
 - `src/Controllers/EnvironmentController.js`: deaths caused by hand leave no seeds, and organisms placed from the editor join or start a lineage.
 - `src/Environments/StormSystem.js`: storms destroy seeds in their circle and log `seeds_destroyed`.
 - `src/Stats/FossilRecord.js` and `src/Stats/Species.js`: lineage IDs, the lineage tree, and species brought back from seed being extant again with `end_tick` -1 and a `revivals` count.
